@@ -79,11 +79,8 @@
       background: #ffffff;
     }
     .main-title { font-size: 18px; font-weight: 900; letter-spacing: 1.5px; color: #0f172a; display: flex; align-items: center; gap: 8px; }
-    .week-nav { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: #0f172a; }
-    .week-nav button {
-      background: #f1f5f9; border: 1.5px solid var(--border-light); padding: 5px 12px;
-      border-radius: 6px; cursor: pointer; font-size: 12px; color: var(--text); font-weight: bold;
-    }
+    
+    .planner-actions { display: flex; align-items: center; gap: 8px; }
     .save-btn {
       background: #22c55e; color: white; border: none; padding: 7px 14px;
       border-radius: 8px; font-weight: 800; font-size: 12px; cursor: pointer;
@@ -93,13 +90,28 @@
     .save-btn:hover { background: #16a34a; }
     .save-btn.saved { background: #0284c7; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3); }
 
+    .reset-btn {
+      background: #f1f5f9; color: #475569; border: 1.5px solid var(--border-light); padding: 7px 12px;
+      border-radius: 8px; font-weight: 800; font-size: 12px; cursor: pointer;
+      display: flex; align-items: center; gap: 4px; transition: all 0.2s;
+    }
+    .reset-btn:hover { background: #e2e8f0; color: #0f172a; }
+
     .memo-section { padding: 12px 16px; border-bottom: 2px solid var(--border); background: #f8fafc; }
-    .memo-title { font-size: 11px; font-weight: 800; color: var(--text-muted); margin-bottom: 8px; letter-spacing: 1px; }
+    .memo-title { font-size: 11px; font-weight: 800; color: var(--text-muted); margin-bottom: 8px; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center; }
     .memo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; }
     .memo-item { display: flex; align-items: center; font-size: 11px; }
     .memo-item span { width: 18px; font-weight: 800; color: #475569; }
     .memo-item input { width: 100%; border: none; border-bottom: 1.5px solid var(--border-light); font-size: 11px; outline: none; background: transparent; padding: 2px 4px; color: var(--text); }
     .memo-item input:focus { border-bottom-color: #0f172a; }
+
+    .carry-over-box {
+      background: #eff6ff; border: 1.5px dashed #bfdbfe; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px;
+      display: none;
+    }
+    .carry-over-title { font-size: 11px; font-weight: 800; color: #1e40af; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
+    .carry-over-list { display: flex; flex-direction: column; gap: 4px; max-height: 100px; overflow-y: auto; }
+    .carry-over-item { font-size: 11px; color: #1e3a8a; display: flex; align-items: center; gap: 6px; font-weight: 600; }
 
     .active-bar {
       padding: 8px 16px; border-bottom: 2px solid var(--border);
@@ -251,18 +263,25 @@
       <div class="main-title">
         <span id="plannerOwnerBadge" style="color: var(--primary-sangmin);">PLANNER (상민)</span>
       </div>
-      <div class="week-nav">
-        <button onclick="changeWeek(-7)">◀ 이전주</button>
-        <span id="currentWeekLabel"></span>
-        <button onclick="changeWeek(7)">다음주 ▶</button>
+      <div class="planner-actions">
+        <button id="saveBtn" class="save-btn" onclick="savePlannerData(true)">
+          💾 저장하기 (기출 보관함으로)
+        </button>
+        <button id="resetWeekBtn" class="reset-btn" onclick="prepareNextWeek()" title="다음 주 준비 (미완료 할 일 이월 및 리셋)">
+          🔄 다음 주 준비
+        </button>
       </div>
-      <button id="saveBtn" class="save-btn" onclick="savePlannerData(true)">
-        💾 저장하기 (기출 보관함으로)
-      </button>
     </div>
 
     <div class="memo-section">
-      <div class="memo-title">WEEKLY GOALS & COMMENTS</div>
+      <div id="carryOverContainer" class="carry-over-box">
+        <div class="carry-over-title">📥 저번 주 미완료 이월 과제 (Must-Do)</div>
+        <div id="carryOverList" class="carry-over-list"></div>
+      </div>
+      <div class="memo-title">
+        <span>WEEKLY GOALS & COMMENTS</span>
+        <span id="currentWeekRange" style="font-size:10px; color:#64748b; font-weight:600;"></span>
+      </div>
       <div class="memo-grid">
         <script>
           for(let i=1; i<=6; i++) {
@@ -473,13 +492,13 @@
   const SOI_MARKS = ['', '—', '⊤', '下', '止', '正'];
   const SANGMIN_MARKS = ['', '|', '||', '|||', '||||', '正'];
 
-  function getWeekInfo(d) {
-    const date = new Date(d);
-    date.setHours(0, 0, 0, 0);
-    const day = date.getDay();
-    const diffToMon = date.getDate() - day + (day === 0 ? -6 : 1);
+  function getCurrentWeekKeyAndRange() {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    const day = d.getDay();
+    const diffToMon = d.getDate() - day + (day === 0 ? -6 : 1);
 
-    const mon = new Date(date.setDate(diffToMon));
+    const mon = new Date(d.setDate(diffToMon));
     const sun = new Date(mon);
     sun.setDate(mon.getDate() + 6);
 
@@ -490,12 +509,10 @@
     const weekKey = `${target.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
     const rangeStr = `${mon.getMonth() + 1}월 ${mon.getDate()}일 ~ ${sun.getMonth() + 1}월 ${sun.getDate()}일`;
 
-    return { weekKey, rangeStr, monDate: mon, sunDate: sun };
+    return { weekKey, rangeStr };
   }
 
   window.currentTab = 'sangmin';
-  window.currentDate = new Date();
-  window.currentWeekInfo = getWeekInfo(window.currentDate);
   window.currentColor = '#ffb7b2';
   window.archiveFilter = 'sangmin';
   window.calendarDate = new Date();
@@ -636,7 +653,6 @@
   });
   window.addEventListener('pagehide', () => { flushSave(); });
 
-  // 진도표 및 캘린더와 동일하게 고정 문서 구조로 변경하여 공유 및 저장 에러 원천 차단
   async function loadPlannerData() {
     if (window.currentTab === 'archive') {
       loadArchiveList();
@@ -644,10 +660,9 @@
     }
 
     resetSaveButtonState();
-    const weekKey = window.currentWeekInfo.weekKey;
-    document.getElementById('currentWeekLabel').innerText = `${window.currentWeekInfo.rangeStr} (${weekKey})`;
+    const { weekKey, rangeStr } = getCurrentWeekKeyAndRange();
+    document.getElementById('currentWeekRange').innerText = `${rangeStr} (${weekKey})`;
 
-    // 문서 ID를 'sangmin_current' 또는 'soi_current'로 고정하여 모든 기기/사용자가 실시간 동기화되도록 수정
     const docId = `${window.currentTab}_current`;
 
     window.plannerLoaded = false;
@@ -666,6 +681,9 @@
         const data = docSnap.data();
         renderPlannerData(data);
         if (data.isArchived) setSavedButtonState();
+        if (data.carriedOverTodos && data.carriedOverTodos.length > 0) {
+          renderCarryOverUI(data.carriedOverTodos);
+        }
       }
       window.plannerLoaded = true;
     }, (error) => {
@@ -678,9 +696,9 @@
     if (['archive', 'progress-sangmin', 'progress-soi', 'calendar'].includes(window.currentTab) || !window.db) return;
     if (!window.plannerLoaded && !isExplicitSave) return;
 
-    const weekKey = window.currentWeekInfo.weekKey;
+    const { weekKey, rangeStr } = getCurrentWeekKeyAndRange();
     const docId = `${window.currentTab}_current`;
-    const archiveId = `${window.currentTab}_${weekKey}`;
+    const archiveId = `${window.currentTab}_${weekKey}_${Date.now()}`;
 
     const weeklyMemos = [];
     document.querySelectorAll('.weekly-memo').forEach(input => {
@@ -726,7 +744,7 @@
       owner: window.currentTab,
       ownerName: window.currentTab === 'sangmin' ? '상민' : '소이',
       weekKey: weekKey,
-      dateRange: window.currentWeekInfo.rangeStr,
+      dateRange: rangeStr,
       weeklyMemos: weeklyMemos,
       todos: todos,
       slots: slotData,
@@ -741,9 +759,7 @@
     if (isExplicitSave) payload.isArchived = true;
 
     try {
-      // 메인 실시간 공유 문서 저장
       await window.db.collection('planners').doc(docId).set(payload, { merge: true });
-      // 기출 보관함 저장을 누른 경우 주차별 아카이브 문서도 별도 저장
       if (isExplicitSave) {
         await window.db.collection('planners').doc(archiveId).set(payload, { merge: true });
         setSavedButtonState();
@@ -784,6 +800,78 @@
     document.querySelectorAll('.slot-cell').forEach(s => s.style.backgroundColor = '');
     document.querySelectorAll('.todo-item input[type="text"]').forEach(i => i.value = '');
     document.querySelectorAll('.todo-item input[type="checkbox"]').forEach(c => c.checked = false);
+    document.getElementById('carryOverContainer').style.display = 'none';
+  }
+
+  function renderCarryOverUI(carriedItems) {
+    const container = document.getElementById('carryOverContainer');
+    const list = document.getElementById('carryOverList');
+    if (!carriedItems || carriedItems.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+    let html = '';
+    carriedItems.forEach(item => {
+      html += `<div class="carry-over-item"><span>📌 [${item.dayName}]</span> <span>${item.text}</span></div>`;
+    });
+    list.innerHTML = html;
+    container.style.display = 'block';
+  }
+
+  async function prepareNextWeek() {
+    if (!confirm('현재 주차 내용을 기출 보관함에 자동 저장하고, 체크되지 않은 미완료 할 일을 이월하여 새 주차 계획표로 리셋하시겠습니까?')) return;
+
+    // 1. 먼저 현재 상태를 기출 보관함에 명시적 저장
+    await savePlannerData(true);
+
+    // 2. 미완료(체크 안 된) 항목 수집
+    const dayNames = ['월', '화', '수', '목', '금', '토', '일'];
+    let uncompletedTodos = [];
+    document.querySelectorAll('.todo-cell').forEach((cell, dIdx) => {
+      cell.querySelectorAll('.todo-item').forEach(item => {
+        const textVal = item.querySelector('input[type="text"]').value.trim();
+        const isChecked = item.querySelector('input[type="checkbox"]').checked;
+        if (textVal && !isChecked) {
+          uncompletedTodos.push({ dayName: dayNames[dIdx], text: textVal });
+        }
+      });
+    });
+
+    // 3. UI 및 Firestore 문서 초기화 (새로운 주차 시작)
+    clearPlannerUI();
+    
+    const { weekKey, rangeStr } = getCurrentWeekKeyAndRange();
+    const docId = `${window.currentTab}_current`;
+    const newPayload = {
+      id: docId,
+      owner: window.currentTab,
+      ownerName: window.currentTab === 'sangmin' ? '상민' : '소이',
+      weekKey: weekKey,
+      dateRange: rangeStr,
+      weeklyMemos: ['', '', '', '', '', ''],
+      todos: Array(7).fill(Array(6).fill({ checked: false, text: '' })),
+      slots: {},
+      totalSlots: 0,
+      totalMinutes: 0,
+      daySlotCounts: [0,0,0,0,0,0,0],
+      totalTodoCount: 0,
+      completedTodoCount: 0,
+      completionRate: 0,
+      carriedOverTodos: uncompletedTodos,
+      isArchived: false,
+      updatedAt: new Date().toISOString()
+    };
+
+    try {
+      await window.db.collection('planners').doc(docId).set(newPayload);
+      if (uncompletedTodos.length > 0) {
+        renderCarryOverUI(uncompletedTodos);
+      }
+      alert('성공적으로 기출 보관함에 백업되었으며, 미완료 항목 이월과 함께 새 주차 플래너로 초기화되었습니다!');
+    } catch(e) {
+      console.error(e);
+      alert('초기화 중 오류가 발생했습니다.');
+    }
   }
 
   async function loadArchiveList() {
@@ -800,7 +888,7 @@
         if (item && item.isArchived) docsData.push(item);
       });
 
-      docsData.sort((a, b) => (b.weekKey || '').localeCompare(a.weekKey || ''));
+      docsData.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
       if (window.archiveFilter !== 'all') {
         docsData = docsData.filter(item => item.owner === window.archiveFilter);
       }
@@ -820,7 +908,7 @@
         html += `
           <div class="archive-card" onclick="openArchiveDetail('${item.id}')">
             <div class="archive-header">
-              <div class="archive-title">${ownerBadge} ${item.dateRange}</div>
+              <div class="archive-title">${ownerBadge} ${item.dateRange || item.weekKey}</div>
               <div class="archive-sub">${item.weekKey}</div>
             </div>
             <div class="archive-stats">
@@ -851,7 +939,7 @@
     const hours = Math.floor((item.totalMinutes || 0) / 60);
     const mins = (item.totalMinutes || 0) % 60;
 
-    document.getElementById('modalTitle').innerText = `[${item.ownerName}] ${item.dateRange} 공부 기록`;
+    document.getElementById('modalTitle').innerText = `[${item.ownerName}] ${item.dateRange || item.weekKey} 공부 기록`;
     document.getElementById('modalTotalTime').innerText = `${hours}시간 ${mins}분 (${item.totalSlots || 0}칸)`;
 
     let dayTimeHtml = '';
@@ -868,7 +956,7 @@
     let memoHtml = '';
     if (item.weeklyMemos) {
       item.weeklyMemos.forEach((m, idx) => {
-        if (m.trim()) memoHtml += `<li><b>${idx + 1}.</b> ${m}</li>`;
+        if (m && m.trim()) memoHtml += `<li><b>${idx + 1}.</b> ${m}</li>`;
       });
     }
     document.getElementById('modalMemos').innerHTML = memoHtml || '<li style="color:#94a3b8;">작성된 목표가 없습니다.</li>';
@@ -877,16 +965,18 @@
     if (item.todos) {
       item.todos.forEach((dayTodos, dIdx) => {
         let itemsHtml = '';
-        dayTodos.forEach(t => {
-          if (t.text.trim()) {
-            itemsHtml += `
-              <div class="modal-todo-item ${t.checked ? 'completed' : ''}">
-                <span>${t.checked ? '✓' : '○'}</span>
-                <span>${t.text}</span>
-              </div>
-            `;
-          }
-        });
+        if (Array.isArray(dayTodos)) {
+          dayTodos.forEach(t => {
+            if (t && t.text && t.text.trim()) {
+              itemsHtml += `
+                <div class="modal-todo-item ${t.checked ? 'completed' : ''}">
+                  <span>${t.checked ? '✓' : '○'}</span>
+                  <span>${t.text}</span>
+                </div>
+              `;
+            }
+          });
+        }
         if (itemsHtml) {
           todoListHtml += `<div class="modal-day-group"><div class="modal-day-title">${dayNames[dIdx]}요일</div>${itemsHtml}</div>`;
         }
@@ -1089,13 +1179,6 @@
       ownerBadge.style.color = tab === 'sangmin' ? 'var(--primary-sangmin)' : 'var(--primary-soi)';
       loadPlannerData();
     }
-  }
-
-  async function changeWeek(daysNav) {
-    await flushSave();
-    window.currentDate.setDate(window.currentDate.getDate() + daysNav);
-    window.currentWeekInfo = getWeekInfo(window.currentDate);
-    loadPlannerData();
   }
 
   let isTouching = false;
