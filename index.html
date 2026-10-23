@@ -79,7 +79,7 @@
       background: #ffffff;
     }
     .main-title { font-size: 18px; font-weight: 900; letter-spacing: 1.5px; color: #0f172a; display: flex; align-items: center; gap: 8px; }
-    
+
     .planner-actions { display: flex; align-items: center; gap: 8px; }
     .auto-save-status {
       font-size: 11px; font-weight: 800; color: #22c55e;
@@ -284,9 +284,8 @@
         <div class="carry-over-title">📥 저번 주 미완료 이월 과제 (Must-Do)</div>
         <div id="carryOverList" class="carry-over-list"></div>
       </div>
-      
+
       <div class="memo-split-container">
-        <!-- 왼쪽: Weekly Goals (3행 2열 = 총 6개) -->
         <div class="memo-box">
           <div class="memo-title">
             <span>WEEKLY GOALS</span>
@@ -306,7 +305,6 @@
           </div>
         </div>
 
-        <!-- 오른쪽: MUST-DO🤬 (3행 2열 = 총 6개) -->
         <div class="memo-box must-do">
           <div class="memo-title">
             <span>MUST-DO🤬</span>
@@ -546,9 +544,26 @@
 
   window.currentTab = 'sangmin';
   window.currentColor = '#ffb7b2';
-  window.currentSelectedDay = 0; 
+  window.currentSelectedDay = 0;
   window.archiveFilter = 'sangmin';
   window.calendarDate = new Date();
+  window.carriedCache = [];
+
+  // 이월 과제: 문자열 배열 <-> 표시용 객체 변환
+  function parseCarried(arr) {
+    return (arr || []).map(s => {
+      if (typeof s !== 'string') return { dayName: s.dayName || '', text: s.text || '' };
+      const p = s.split(': ');
+      return { dayName: p[0], text: p.slice(1).join(': ') };
+    });
+  }
+
+  // 요일별 할 일: 예전 형식(배열)과 새 형식({items}) 모두 지원
+  function getDayItems(dayData) {
+    if (Array.isArray(dayData)) return dayData;
+    if (dayData && Array.isArray(dayData.items)) return dayData.items;
+    return [];
+  }
 
   function initProgressTables() {
     const sangminBody = document.getElementById('progressSangminBody');
@@ -681,6 +696,7 @@
     const docId = `${window.currentTab}_current`;
 
     window.plannerLoaded = false;
+    window.carriedCache = [];
     clearPlannerUI();
 
     if (unsubscribePlanner) unsubscribePlanner();
@@ -695,9 +711,8 @@
       if (docSnap.exists && !isTyping && !saveTimer) {
         const data = docSnap.data();
         renderPlannerData(data);
-        if (data.carriedOverTodos && data.carriedOverTodos.length > 0) {
-          renderCarryOverUI(data.carriedOverTodos);
-        }
+        window.carriedCache = Array.isArray(data.carriedOverTodos) ? data.carriedOverTodos : [];
+        renderCarryOverUI(parseCarried(window.carriedCache));
       }
       window.plannerLoaded = true;
     }, (error) => {
@@ -724,6 +739,7 @@
       mustDoMemos.push(input.value);
     });
 
+    // Firestore는 중첩 배열 불가 → 요일별로 { items: [...] } 객체로 감싸서 저장
     const todos = [];
     let totalTodoCount = 0;
     let completedTodoCount = 0;
@@ -739,7 +755,7 @@
           if (isChecked) completedTodoCount++;
         }
       });
-      todos.push(items);
+      todos.push({ items });
     });
 
     const completionRate = totalTodoCount > 0 ? Math.round((completedTodoCount / totalTodoCount) * 100) : 0;
@@ -759,7 +775,7 @@
     });
 
     const payload = {
-      id: archiveId,
+      id: isExplicitSave ? archiveId : docId,
       owner: window.currentTab,
       ownerName: window.currentTab === 'sangmin' ? '상민' : '소이',
       weekKey: weekKey,
@@ -776,14 +792,23 @@
       completionRate: completionRate,
       updatedAt: new Date().toISOString()
     };
-    if (isExplicitSave) payload.isArchived = true;
 
     try {
-      await window.db.collection('planners').doc(docId).set(payload, { merge: true });
       if (isExplicitSave) {
-        await window.db.collection('planners').doc(archiveId).set(payload, { merge: true });
+        // 기출 보관함용 복사본
+        await window.db.collection('planners').doc(archiveId).set({ ...payload, isArchived: true });
       }
-    } catch(e) { console.error("Save Error:", e); }
+      // 현재 문서: merge 없이 통째로 덮어써야 지운 시간칸이 서버에서도 사라짐
+      await window.db.collection('planners').doc(docId).set({
+        ...payload,
+        id: docId,
+        carriedOverTodos: window.carriedCache || [],
+        isArchived: false
+      });
+    } catch(e) {
+      console.error("Save Error:", e);
+      if (isExplicitSave) throw e;
+    }
   }
 
   function renderPlannerData(data) {
@@ -801,14 +826,12 @@
     if (data.todos) {
       document.querySelectorAll('.todo-cell').forEach((cell, cellIdx) => {
         const items = cell.querySelectorAll('.todo-item');
-        if (data.todos[cellIdx]) {
-          data.todos[cellIdx].forEach((itemData, itemIdx) => {
-            if (items[itemIdx]) {
-              items[itemIdx].querySelector('input[type="checkbox"]').checked = itemData.checked;
-              items[itemIdx].querySelector('input[type="text"]').value = itemData.text;
-            }
-          });
-        }
+        getDayItems(data.todos[cellIdx]).forEach((itemData, itemIdx) => {
+          if (items[itemIdx]) {
+            items[itemIdx].querySelector('input[type="checkbox"]').checked = !!itemData.checked;
+            items[itemIdx].querySelector('input[type="text"]').value = itemData.text || '';
+          }
+        });
       });
     }
     if (data.slots) {
@@ -847,8 +870,6 @@
     if (!confirm('현재 주차 내용을 기출 보관함에 자동으로 백업하고, 체크되지 않은 미완료 할 일을 이월하여 새 주차 계획표로 리셋하시겠습니까?')) return;
 
     try {
-      await savePlannerData(true);
-
       const dayNames = ['월', '화', '수', '목', '금', '토', '일'];
       let uncompletedTodos = [];
       document.querySelectorAll('.todo-cell').forEach((cell, dIdx) => {
@@ -856,24 +877,31 @@
           const textVal = item.querySelector('input[type="text"]').value.trim();
           const isChecked = item.querySelector('input[type="checkbox"]').checked;
           if (textVal && !isChecked) {
-            // Firestore 중첩 배열 에러 방지를 위해 문자열 배열로 직렬화하여 저장
             uncompletedTodos.push(`${dayNames[dIdx]}: ${textVal}`);
           }
         });
       });
 
+      // 1) 기출 보관함에 백업
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      await savePlannerData(true);
+
+      // 2) 새 주차로 리셋
+      window.plannerLoaded = false;
       clearPlannerUI();
-      
+      window.carriedCache = uncompletedTodos;
+
       const { weekKey, rangeStr } = getCurrentWeekKeyAndRange();
       const docId = `${window.currentTab}_current`;
-      
+
       const emptyTodos = [];
-      for(let d=0; d<7; d++) {
+      for (let d = 0; d < 7; d++) {
         const dayItems = [];
-        for(let i=0; i<6; i++) {
+        for (let i = 0; i < 6; i++) {
           dayItems.push({ checked: false, text: '' });
         }
-        emptyTodos.push(dayItems);
+        emptyTodos.push({ items: dayItems });
       }
 
       const newPayload = {
@@ -898,15 +926,12 @@
       };
 
       await window.db.collection('planners').doc(docId).set(newPayload);
-      if (uncompletedTodos.length > 0) {
-        renderCarryOverUI(uncompletedTodos.map(item => {
-          const parts = item.split(': ');
-          return { dayName: parts[0], text: parts.slice(1).join(': ') };
-        }));
-      }
+      window.plannerLoaded = true;
+      renderCarryOverUI(parseCarried(uncompletedTodos));
       alert('성공적으로 기출 보관함에 백업되었으며, 새 주차 플래너로 초기화되었습니다!');
     } catch(e) {
       console.error(e);
+      window.plannerLoaded = true;
       alert('초기화 중 오류가 발생했습니다: ' + e.message);
     }
   }
@@ -1007,18 +1032,16 @@
     if (item.todos) {
       item.todos.forEach((dayTodos, dIdx) => {
         let itemsHtml = '';
-        if (Array.isArray(dayTodos)) {
-          dayTodos.forEach(t => {
-            if (t && t.text && t.text.trim()) {
-              itemsHtml += `
-                <div class="modal-todo-item ${t.checked ? 'completed' : ''}">
-                  <span>${t.checked ? '✓' : '○'}</span>
-                  <span>${t.text}</span>
-                </div>
-              `;
-            }
-          });
-        }
+        getDayItems(dayTodos).forEach(t => {
+          if (t && t.text && t.text.trim()) {
+            itemsHtml += `
+              <div class="modal-todo-item ${t.checked ? 'completed' : ''}">
+                <span>${t.checked ? '✓' : '○'}</span>
+                <span>${t.text}</span>
+              </div>
+            `;
+          }
+        });
         if (itemsHtml) {
           todoListHtml += `<div class="modal-day-group"><div class="modal-day-title">${dayNames[dIdx]}요일</div>${itemsHtml}</div>`;
         }
@@ -1245,7 +1268,7 @@
 
   function setActiveTodo(color, title, dayIdx) {
     window.currentColor = color;
-    window.currentSelectedDay = dayIdx; 
+    window.currentSelectedDay = dayIdx;
     document.getElementById('activeColorBadge').style.backgroundColor = color;
     document.getElementById('activeTodoTitle').innerText = title;
   }
@@ -1261,10 +1284,10 @@
     if (window.currentColor !== '#ffffff') {
       const slotDayCol = parseInt(td.dataset.dayCol, 10);
       if (slotDayCol !== window.currentSelectedDay) {
-        return; 
+        return;
       }
     }
-    td.style.backgroundColor = window.currentColor; 
+    td.style.backgroundColor = window.currentColor;
     onDataChanged();
   }
 
