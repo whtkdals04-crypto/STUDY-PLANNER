@@ -81,14 +81,11 @@
     .main-title { font-size: 18px; font-weight: 900; letter-spacing: 1.5px; color: #0f172a; display: flex; align-items: center; gap: 8px; }
     
     .planner-actions { display: flex; align-items: center; gap: 8px; }
-    .save-btn {
-      background: #22c55e; color: white; border: none; padding: 7px 14px;
-      border-radius: 8px; font-weight: 800; font-size: 12px; cursor: pointer;
-      display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(34,197,94,0.3);
-      transition: background 0.2s;
+    .auto-save-status {
+      font-size: 11px; font-weight: 800; color: #22c55e;
+      background: #f0fdf4; border: 1px solid #bbf7d0; padding: 6px 10px; border-radius: 8px;
+      display: flex; align-items: center; gap: 4px;
     }
-    .save-btn:hover { background: #16a34a; }
-    .save-btn.saved { background: #0284c7; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3); }
 
     .reset-btn {
       background: #f1f5f9; color: #475569; border: 1.5px solid var(--border-light); padding: 7px 12px;
@@ -98,12 +95,21 @@
     .reset-btn:hover { background: #e2e8f0; color: #0f172a; }
 
     .memo-section { padding: 12px 16px; border-bottom: 2px solid var(--border); background: #f8fafc; }
-    .memo-title { font-size: 11px; font-weight: 800; color: var(--text-muted); margin-bottom: 8px; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center; }
-    .memo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; }
+    .memo-split-container { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 768px) { .memo-split-container { grid-template-columns: 1fr; gap: 10px; } }
+
+    .memo-box { background: #ffffff; border: 1.5px solid var(--border-light); border-radius: 8px; padding: 10px; }
+    .memo-box.must-do { border-color: #fecdd3; background: #fff5f5; }
+    .memo-title { font-size: 11px; font-weight: 800; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center; }
+    .memo-box.must-do .memo-title { color: #e11d48; }
+
+    .memo-grid-3x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
     .memo-item { display: flex; align-items: center; font-size: 11px; }
-    .memo-item span { width: 18px; font-weight: 800; color: #475569; }
+    .memo-item span { width: 16px; font-weight: 800; color: #475569; }
     .memo-item input { width: 100%; border: none; border-bottom: 1.5px solid var(--border-light); font-size: 11px; outline: none; background: transparent; padding: 2px 4px; color: var(--text); }
     .memo-item input:focus { border-bottom-color: #0f172a; }
+    .memo-box.must-do .memo-item input { border-bottom-color: #fca5a5; }
+    .memo-box.must-do .memo-item input:focus { border-bottom-color: #e11d48; }
 
     .carry-over-box {
       background: #eff6ff; border: 1.5px dashed #bfdbfe; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px;
@@ -264,10 +270,10 @@
         <span id="plannerOwnerBadge" style="color: var(--primary-sangmin);">PLANNER (상민)</span>
       </div>
       <div class="planner-actions">
-        <button id="saveBtn" class="save-btn" onclick="savePlannerData(true)">
-          💾 저장하기 (기출 보관함으로)
-        </button>
-        <button id="resetWeekBtn" class="reset-btn" onclick="prepareNextWeek()" title="다음 주 준비 (미완료 할 일 이월 및 리셋)">
+        <div class="auto-save-status">
+          <span>⚡ 자동 저장 활성화</span>
+        </div>
+        <button id="resetWeekBtn" class="reset-btn" onclick="prepareNextWeek()" title="다음 주 준비 (기출 자동 백업, 미완료 할 일 이월 및 리셋)">
           🔄 다음 주 준비
         </button>
       </div>
@@ -278,21 +284,47 @@
         <div class="carry-over-title">📥 저번 주 미완료 이월 과제 (Must-Do)</div>
         <div id="carryOverList" class="carry-over-list"></div>
       </div>
-      <div class="memo-title">
-        <span>WEEKLY GOALS & COMMENTS</span>
-        <span id="currentWeekRange" style="font-size:10px; color:#64748b; font-weight:600;"></span>
-      </div>
-      <div class="memo-grid">
-        <script>
-          for(let i=1; i<=6; i++) {
-            document.write(`
-              <div class="memo-item">
-                <span>${i}.</span>
-                <input type="text" class="weekly-memo" placeholder="목표 입력..." oninput="onDataChanged()">
-              </div>
-            `);
-          }
-        </script>
+      
+      <div class="memo-split-container">
+        <!-- 왼쪽: Weekly Goals (3행 2열 = 총 6개) -->
+        <div class="memo-box">
+          <div class="memo-title">
+            <span>WEEKLY GOALS</span>
+            <span id="currentWeekRange" style="font-size:10px; color:#64748b; font-weight:600;"></span>
+          </div>
+          <div class="memo-grid-3x2">
+            <script>
+              for(let i=1; i<=6; i++) {
+                document.write(`
+                  <div class="memo-item">
+                    <span>${i}.</span>
+                    <input type="text" class="weekly-memo" placeholder="목표 입력..." oninput="onDataChanged()">
+                  </div>
+                `);
+              }
+            </script>
+          </div>
+        </div>
+
+        <!-- 오른쪽: MUST-DO🤬 (3행 2열 = 총 6개) -->
+        <div class="memo-box must-do">
+          <div class="memo-title">
+            <span>MUST-DO🤬</span>
+            <span style="font-size:10px; color:#e11d48; font-weight:600;">필수 실천 과제</span>
+          </div>
+          <div class="memo-grid-3x2">
+            <script>
+              for(let i=1; i<=6; i++) {
+                document.write(`
+                  <div class="memo-item">
+                    <span>${i}.</span>
+                    <input type="text" class="mustdo-memo" placeholder="필수과제 입력..." oninput="onDataChanged()">
+                  </div>
+                `);
+              }
+            </script>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -310,7 +342,8 @@
         </tr>
         <tr>
           <script>
-            const colors = ['#ffb7b2', '#ffdac1', '#e2f0cb', '#b5ead7', '#c7ceea', '#e0bbe4'];
+            // 파스텔톤 색상: 빨강, 노랑, 초록, 하늘, 남색과 파랑 사이의 색(인디고/블루계열 파스텔), 보라
+            const colors = ['#ffb7b2', '#fff176', '#c8e6c9', '#b3e5fc', '#c5cae9', '#e1bee7'];
             const days = ['월','화','수','목','금','토','일'];
             for(let d=0; d<7; d++) {
               document.write(`<td class="todo-cell" data-day="${d}">`);
@@ -319,7 +352,7 @@
                 document.write(`
                   <div class="todo-item" style="background: ${c}44;">
                     <div class="todo-control-group">
-                      <input type="radio" name="activeTodo" ${d===0 && i===0 ? 'checked' : ''} onchange="setActiveTodo('${c}', '${days[d]}요일 ${i+1}번')">
+                      <input type="radio" name="activeTodo" ${d===0 && i===0 ? 'checked' : ''} onchange="setActiveTodo('${c}', '${days[d]}요일 ${i+1}번', ${d})">
                       <input type="checkbox" onchange="onDataChanged()">
                     </div>
                     <input type="text" oninput="onDataChanged()" placeholder="${i+1}. 할 일">
@@ -349,7 +382,7 @@
             for(let d=0; d<7; d++) {
               document.write(`<td><div style="display:flex; height:100%;">`);
               for(let m=0; m<6; m++) {
-                document.write(`<div class="slot-cell" style="flex:1;" data-slot-id="${d}-${h}-${m}"></div>`);
+                document.write(`<div class="slot-cell" style="flex:1;" data-day-col="${d}" data-slot-id="${d}-${h}-${m}"></div>`);
               }
               document.write(`</div></td>`);
             }
@@ -467,7 +500,7 @@
       <div id="modalDayTimes" style="display: flex; flex-wrap: wrap;"></div>
     </div>
     <div style="margin-bottom: 16px;">
-      <div style="font-size: 12px; font-weight: 800; color: #0f172a; margin-bottom: 6px;">🎯 위클리 목표</div>
+      <div style="font-size: 12px; font-weight: 800; color: #0f172a; margin-bottom: 6px;">🎯 위클리 목표 & Must-Do</div>
       <ul id="modalMemos" style="margin: 0; padding-left: 18px; font-size: 12px; color: #334155;"></ul>
     </div>
     <div>
@@ -514,6 +547,7 @@
 
   window.currentTab = 'sangmin';
   window.currentColor = '#ffb7b2';
+  window.currentSelectedDay = 0; // 기본 월요일(0)
   window.archiveFilter = 'sangmin';
   window.calendarDate = new Date();
 
@@ -614,25 +648,8 @@
   let unsubscribePlanner = null;
   window.plannerLoaded = false;
 
-  function resetSaveButtonState() {
-    const saveBtn = document.getElementById('saveBtn');
-    if (saveBtn) {
-      saveBtn.classList.remove('saved');
-      saveBtn.innerHTML = '💾 저장하기 (기출 보관함으로)';
-    }
-  }
-
-  function setSavedButtonState() {
-    const saveBtn = document.getElementById('saveBtn');
-    if (saveBtn) {
-      saveBtn.classList.add('saved');
-      saveBtn.innerHTML = '✅ 저장완료';
-    }
-  }
-
   function onDataChanged() {
     if (!window.plannerLoaded) return;
-    resetSaveButtonState();
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       saveTimer = null;
@@ -659,7 +676,6 @@
       return;
     }
 
-    resetSaveButtonState();
     const { weekKey, rangeStr } = getCurrentWeekKeyAndRange();
     document.getElementById('currentWeekRange').innerText = `${rangeStr} (${weekKey})`;
 
@@ -680,7 +696,6 @@
       if (docSnap.exists && !isTyping && !saveTimer) {
         const data = docSnap.data();
         renderPlannerData(data);
-        if (data.isArchived) setSavedButtonState();
         if (data.carriedOverTodos && data.carriedOverTodos.length > 0) {
           renderCarryOverUI(data.carriedOverTodos);
         }
@@ -703,6 +718,11 @@
     const weeklyMemos = [];
     document.querySelectorAll('.weekly-memo').forEach(input => {
       weeklyMemos.push(input.value);
+    });
+
+    const mustDoMemos = [];
+    document.querySelectorAll('.mustdo-memo').forEach(input => {
+      mustDoMemos.push(input.value);
     });
 
     const todos = [];
@@ -746,6 +766,7 @@
       weekKey: weekKey,
       dateRange: rangeStr,
       weeklyMemos: weeklyMemos,
+      mustDoMemos: mustDoMemos,
       todos: todos,
       slots: slotData,
       totalSlots: totalPaintedSlots,
@@ -762,7 +783,6 @@
       await window.db.collection('planners').doc(docId).set(payload, { merge: true });
       if (isExplicitSave) {
         await window.db.collection('planners').doc(archiveId).set(payload, { merge: true });
-        setSavedButtonState();
       }
     } catch(e) { console.error("Save Error:", e); }
   }
@@ -772,6 +792,11 @@
     if (data.weeklyMemos) {
       document.querySelectorAll('.weekly-memo').forEach((input, idx) => {
         if (data.weeklyMemos[idx]) input.value = data.weeklyMemos[idx];
+      });
+    }
+    if (data.mustDoMemos) {
+      document.querySelectorAll('.mustdo-memo').forEach((input, idx) => {
+        if (data.mustDoMemos[idx]) input.value = data.mustDoMemos[idx];
       });
     }
     if (data.todos) {
@@ -797,6 +822,7 @@
 
   function clearPlannerUI() {
     document.querySelectorAll('.weekly-memo').forEach(i => i.value = '');
+    document.querySelectorAll('.mustdo-memo').forEach(i => i.value = '');
     document.querySelectorAll('.slot-cell').forEach(s => s.style.backgroundColor = '');
     document.querySelectorAll('.todo-item input[type="text"]').forEach(i => i.value = '');
     document.querySelectorAll('.todo-item input[type="checkbox"]').forEach(c => c.checked = false);
@@ -819,13 +845,11 @@
   }
 
   async function prepareNextWeek() {
-    if (!confirm('현재 주차 내용을 기출 보관함에 자동 저장하고, 체크되지 않은 미완료 할 일을 이월하여 새 주차 계획표로 리셋하시겠습니까?')) return;
+    if (!confirm('현재 주차 내용을 기출 보관함에 자동으로 백업하고, 체크되지 않은 미완료 할 일을 이월하여 새 주차 계획표로 리셋하시겠습니까?')) return;
 
     try {
-      // 1. 먼저 현재 상태를 기출 보관함에 명시적 저장
       await savePlannerData(true);
 
-      // 2. 미완료(체크 안 된) 항목 수집
       const dayNames = ['월', '화', '수', '목', '금', '토', '일'];
       let uncompletedTodos = [];
       document.querySelectorAll('.todo-cell').forEach((cell, dIdx) => {
@@ -838,13 +862,11 @@
         });
       });
 
-      // 3. UI 및 Firestore 문서 초기화 (새로운 주차 시작)
       clearPlannerUI();
       
       const { weekKey, rangeStr } = getCurrentWeekKeyAndRange();
       const docId = `${window.currentTab}_current`;
       
-      // 안전한 배열 구조 생성 (Firestore 호환)
       const emptyTodos = [];
       for(let d=0; d<7; d++) {
         const dayItems = [];
@@ -861,6 +883,7 @@
         weekKey: weekKey,
         dateRange: rangeStr,
         weeklyMemos: ['', '', '', '', '', ''],
+        mustDoMemos: ['', '', '', '', '', ''],
         todos: emptyTodos,
         slots: {},
         totalSlots: 0,
@@ -878,7 +901,7 @@
       if (uncompletedTodos.length > 0) {
         renderCarryOverUI(uncompletedTodos);
       }
-      alert('성공적으로 기출 보관함에 백업되었으며, 미완료 항목 이월과 함께 새 주차 플래너로 초기화되었습니다!');
+      alert('성공적으로 기출 보관함에 백업되었으며, 새 주차 플래너로 초기화되었습니다!');
     } catch(e) {
       console.error(e);
       alert('초기화 중 오류가 발생했습니다: ' + e.message);
@@ -905,7 +928,7 @@
       }
 
       if (docsData.length === 0) {
-        archiveContainer.innerHTML = `<div style="text-align:center; padding: 50px; color: #94a3b8; font-weight: 600;">저장된 플래너 기록이 없습니다.<br>플래너에서 '저장하기' 버튼을 눌러 기록을 남겨보세요!</div>`;
+        archiveContainer.innerHTML = `<div style="text-align:center; padding: 50px; color: #94a3b8; font-weight: 600;">저장된 플래너 기록이 없습니다.<br>'다음 주 준비'를 누르거나 자동 백업을 이용해보세요!</div>`;
         return;
       }
 
@@ -967,7 +990,12 @@
     let memoHtml = '';
     if (item.weeklyMemos) {
       item.weeklyMemos.forEach((m, idx) => {
-        if (m && m.trim()) memoHtml += `<li><b>${idx + 1}.</b> ${m}</li>`;
+        if (m && m.trim()) memoHtml += `<li><b>[Goal ${idx + 1}]</b> ${m}</li>`;
+      });
+    }
+    if (item.mustDoMemos) {
+      item.mustDoMemos.forEach((m, idx) => {
+        if (m && m.trim()) memoHtml += `<li style="color:#e11d48;"><b>[Must-Do ${idx + 1}]</b> ${m}</li>`;
       });
     }
     document.getElementById('modalMemos').innerHTML = memoHtml || '<li style="color:#94a3b8;">작성된 목표가 없습니다.</li>';
@@ -1212,20 +1240,29 @@
   });
   window.addEventListener('mouseup', () => { if(isTouching) { isTouching = false; onDataChanged(); } });
 
-  function setActiveTodo(color, title) {
+  function setActiveTodo(color, title, dayIdx) {
     window.currentColor = color;
+    window.currentSelectedDay = dayIdx; // 선택된 요일 설정 (0~6)
     document.getElementById('activeColorBadge').style.backgroundColor = color;
     document.getElementById('activeTodoTitle').innerText = title;
   }
 
   function selectEraser() {
     window.currentColor = '#ffffff';
+    // 지우개 선택 시에는 요일 제한 없이 어디든 지울 수 있도록 허용하거나 선택된 요일 유지
     document.getElementById('activeColorBadge').style.backgroundColor = '#ffffff';
     document.getElementById('activeTodoTitle').innerText = '지우개 선택됨';
     document.querySelectorAll('input[name="activeTodo"]').forEach(r => r.checked = false);
   }
 
-  function paint(td) { 
+  function paint(td) {
+    // 🧹 지우개 모드가 아닐 때, 해당 셀이 선택된 요일(컬럼)에 속하는지 엄격히 검사
+    if (window.currentColor !== '#ffffff') {
+      const slotDayCol = parseInt(td.dataset.dayCol, 10);
+      if (slotDayCol !== window.currentSelectedDay) {
+        return; // 다른 요일의 타임테이블은 색칠되지 않도록 차단
+      }
+    }
     td.style.backgroundColor = window.currentColor; 
     onDataChanged();
   }
