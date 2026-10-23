@@ -620,7 +620,7 @@
     saveTimer = setTimeout(() => {
       saveTimer = null;
       savePlannerData(false);
-    }, 800);
+    }, 400);
   }
 
   async function flushSave() {
@@ -658,14 +658,16 @@
       if (docSnap.metadata.hasPendingWrites) return;
 
       const active = document.activeElement;
-      const typing = active && active.tagName === 'INPUT' && active.type === 'text';
-      const hasUnsaved = !!saveTimer;
+      const isTyping = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
 
-      if (docSnap.exists && !typing && !hasUnsaved) {
+      if (docSnap.exists && !isTyping && !saveTimer) {
         const data = docSnap.data();
         renderPlannerData(data);
         if (data.isArchived) setSavedButtonState();
       }
+      window.plannerLoaded = true;
+    }, (error) => {
+      console.error("Firestore Error:", error);
       window.plannerLoaded = true;
     });
   }
@@ -707,8 +709,9 @@
     const daySlotCounts = [0, 0, 0, 0, 0, 0, 0];
 
     document.querySelectorAll('.slot-cell').forEach(slot => {
-      if (slot.style.backgroundColor && slot.style.backgroundColor !== 'transparent' && slot.style.backgroundColor !== 'rgb(255, 255, 255)') {
-        slotData[slot.dataset.slotId] = slot.style.backgroundColor;
+      const bg = slot.style.backgroundColor;
+      if (bg && bg !== 'transparent' && bg !== 'rgb(255, 255, 255)' && bg !== '#ffffff') {
+        slotData[slot.dataset.slotId] = bg;
         totalPaintedSlots++;
         const dayIdx = parseInt(slot.dataset.slotId.split('-')[0], 10);
         if (!isNaN(dayIdx)) daySlotCounts[dayIdx]++;
@@ -735,9 +738,9 @@
     if (isExplicitSave) payload.isArchived = true;
 
     try {
-      await window.db.collection('planners').doc(docId).set(payload, { mergeFields: Object.keys(payload) });
+      await window.db.collection('planners').doc(docId).set(payload, { merge: true });
       if (isExplicitSave) setSavedButtonState();
-    } catch(e) { console.error(e); }
+    } catch(e) { console.error("Save Error:", e); }
   }
 
   function renderPlannerData(data) {
@@ -1120,7 +1123,10 @@
     document.querySelectorAll('input[name="activeTodo"]').forEach(r => r.checked = false);
   }
 
-  function paint(td) { td.style.backgroundColor = window.currentColor; }
+  function paint(td) { 
+    td.style.backgroundColor = window.currentColor; 
+    onDataChanged();
+  }
 
   window.addEventListener('firebase-ready', () => {
     initProgressTables();
