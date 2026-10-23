@@ -4,6 +4,37 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>STUDY PLANNER & PROGRESS TRACKER</title>
+  <!-- Firebase SDK 추가 -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+    import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAQaQi17WTVvssfnmaqEIMU9tWfWTdpps8",
+      authDomain: "study-planner-a951e.firebaseapp.com",
+      projectId: "study-planner-a951e",
+      storageBucket: "study-planner-a951e.firebasestorage.app",
+      messagingSenderId: "301045007272",
+      appId: "1:301045007272:web:2bd508581280cf5707139d",
+      measurementId: "G-6XGSJ880Q4"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // 전역으로 파이어베이스 함수 노출
+    window.db = db;
+    window.docRef = doc;
+    window.setDoc = setDoc;
+    window.getDoc = getDoc;
+    window.onSnapshot = onSnapshot;
+    window.collection = collection;
+    window.getDocs = getDocs;
+
+    // 파이어베이스 로드 완료 후 초기 데이터 불러오기 실행
+    window.dispatchEvent(new Event('firebase-ready'));
+  </script>
+
   <style>
     :root {
       --bg: #f8fafc;
@@ -69,9 +100,7 @@
       transition: background 0.2s;
     }
     .save-btn:hover { background: #16a34a; }
-    .save-btn.saved {
-      background: #0284c7; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3);
-    }
+    .save-btn.saved { background: #0284c7; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3); }
 
     .memo-section { padding: 12px 16px; border-bottom: 2px solid var(--border); background: #f8fafc; }
     .memo-title { font-size: 11px; font-weight: 800; color: var(--text-muted); margin-bottom: 8px; letter-spacing: 1px; }
@@ -309,7 +338,7 @@
             document.write(`<td class="time-col">${hStr}</td>`);
             for(let d=0; d<7; d++) {
               document.write(`<td><div style="display:flex; height:100%;">`);
-              for(let m=0; m<6; m++) { // 1시간당 6칸 (10분 단위)
+              for(let m=0; m<6; m++) {
                 document.write(`<div class="slot-cell" style="flex:1;" data-slot-id="${d}-${h}-${m}"></div>`);
               }
               document.write(`</div></td>`);
@@ -332,7 +361,7 @@
       </thead>
       <tbody id="progressSangminBody"></tbody>
     </table>
-    <div class="progress-footer">칸을 누를 때마다 획수(✓ ➔ | ➔ || ➔ ||| ➔ |||| ➔ 正)가 증가합니다. '정리'는 체크(✓) 표시됩니다.</div>
+    <div class="progress-footer">칸을 누를 때마다 획수가 증가합니다.</div>
   </div>
 
   <div id="progressSoiView" class="progress-container" style="display: none;">
@@ -346,7 +375,7 @@
       </thead>
       <tbody id="progressSoiBody"></tbody>
     </table>
-    <div class="progress-footer">칸을 누를 때마다 바르게 한 자씩(— ➔ ⊤ ➔ 下 ➔ 止 ➔ 正 = 5회독) 증가합니다.</div>
+    <div class="progress-footer">칸을 누를 때마다 회독 수가 증가합니다.</div>
   </div>
 
   <div id="archiveView" class="archive-container" style="display: none;">
@@ -480,6 +509,7 @@
   window.archiveFilter = 'sangmin';
   window.calendarDate = new Date();
 
+  // 파이어베이스 진도표 로드 및 저장
   function initProgressTables() {
     const sangminBody = document.getElementById('progressSangminBody');
     let sangminHtml = '';
@@ -507,7 +537,7 @@
     loadProgressData('soi');
   }
 
-  function toggleProgressCell(td) {
+  async function toggleProgressCell(td) {
     const user = td.dataset.user;
     const unit = td.dataset.unit;
     const col = td.dataset.col;
@@ -521,7 +551,7 @@
 
     td.dataset.count = count;
     renderProgressCellText(td);
-    saveProgressData(user);
+    await saveProgressData(user);
   }
 
   function renderProgressCellText(td) {
@@ -548,28 +578,33 @@
     }
   }
 
-  function saveProgressData(user) {
+  async function saveProgressData(user) {
+    if (!window.db) return;
     const data = {};
     document.querySelectorAll(`.progress-cell[data-user="${user}"]`).forEach(cell => {
       const key = `${cell.dataset.unit}_${cell.dataset.col}`;
       data[key] = cell.dataset.count || '0';
     });
-    localStorage.setItem(`progress_${user}`, JSON.stringify(data));
+    try {
+      await window.setDoc(window.docRef(window.db, 'progress', user), data);
+    } catch(e) { console.error(e); }
   }
 
-  function loadProgressData(user) {
-    const raw = localStorage.getItem(`progress_${user}`);
-    if (!raw) return;
+  async function loadProgressData(user) {
+    if (!window.db) return;
     try {
-      const data = JSON.parse(raw);
-      Object.keys(data).forEach(key => {
-        const [uIdx, cIdx] = key.split('_');
-        const cell = document.querySelector(`.progress-cell[data-user="${user}"][data-unit="${uIdx}"][data-col="${cIdx}"]`);
-        if (cell) {
-          cell.dataset.count = data[key];
-          renderProgressCellText(cell);
-        }
-      });
+      const docSnap = await window.getDoc(window.docRef(window.db, 'progress', user));
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        Object.keys(data).forEach(key => {
+          const [uIdx, cIdx] = key.split('_');
+          const cell = document.querySelector(`.progress-cell[data-user="${user}"][data-unit="${uIdx}"][data-col="${cIdx}"]`);
+          if (cell) {
+            cell.dataset.count = data[key];
+            renderProgressCellText(cell);
+          }
+        });
+      }
     } catch(e) { console.error(e); }
   }
 
@@ -594,7 +629,9 @@
     savePlannerData(false);
   }
 
-  function loadPlannerData() {
+  let unsubscribePlanner = null;
+
+  async function loadPlannerData() {
     if (window.currentTab === 'archive') {
       loadArchiveList();
       return;
@@ -605,21 +642,25 @@
     document.getElementById('currentWeekLabel').innerText = `${window.currentWeekInfo.rangeStr} (${weekKey})`;
     
     const docId = `${window.currentTab}_${weekKey}`;
-    const savedData = localStorage.getItem(`planner_${docId}`);
-    
-    if (savedData) {
-      const data = JSON.parse(savedData);
-      renderPlannerData(data);
-      if (data.isArchived) {
-        setSavedButtonState();
+    clearPlannerUI();
+
+    if (unsubscribePlanner) unsubscribePlanner();
+
+    if (!window.db) return;
+
+    unsubscribePlanner = window.onSnapshot(window.docRef(window.db, 'planners', docId), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        renderPlannerData(data);
+        if (data.isArchived) {
+          setSavedButtonState();
+        }
       }
-    } else {
-      clearPlannerUI();
-    }
+    });
   }
 
-  function savePlannerData(isExplicitSave = false) {
-    if (['archive', 'progress-sangmin', 'progress-soi', 'calendar'].includes(window.currentTab)) return;
+  async function savePlannerData(isExplicitSave = false) {
+    if (['archive', 'progress-sangmin', 'progress-soi', 'calendar'].includes(window.currentTab) || !window.db) return;
 
     const weekKey = window.currentWeekInfo.weekKey;
     const docId = `${window.currentTab}_${weekKey}`;
@@ -638,10 +679,7 @@
       cell.querySelectorAll('.todo-item').forEach(item => {
         const textVal = item.querySelector('input[type="text"]').value.trim();
         const isChecked = item.querySelector('input[type="checkbox"]').checked;
-        items.push({
-          checked: isChecked,
-          text: textVal
-        });
+        items.push({ checked: isChecked, text: textVal });
         if (textVal.length > 0) {
           totalTodoCount++;
           if (isChecked) completedTodoCount++;
@@ -650,9 +688,7 @@
       todos.push(items);
     });
 
-    const completionRate = totalTodoCount > 0 
-      ? Math.round((completedTodoCount / totalTodoCount) * 100) 
-      : 0;
+    const completionRate = totalTodoCount > 0 ? Math.round((completedTodoCount / totalTodoCount) * 100) : 0;
 
     const slotData = {};
     let totalPaintedSlots = 0;
@@ -662,14 +698,10 @@
       if (slot.style.backgroundColor && slot.style.backgroundColor !== 'transparent' && slot.style.backgroundColor !== 'rgb(255, 255, 255)') {
         slotData[slot.dataset.slotId] = slot.style.backgroundColor;
         totalPaintedSlots++;
-        
         const dayIdx = parseInt(slot.dataset.slotId.split('-')[0], 10);
         if (!isNaN(dayIdx)) daySlotCounts[dayIdx]++;
       }
     });
-
-    const existingDoc = localStorage.getItem(`planner_${docId}`);
-    const existing = existingDoc ? JSON.parse(existingDoc) : {};
 
     const payload = {
       id: docId,
@@ -681,86 +713,76 @@
       todos: todos,
       slots: slotData,
       totalSlots: totalPaintedSlots,
-      totalMinutes: totalPaintedSlots * 10, // 10분 단위 계산
+      totalMinutes: totalPaintedSlots * 10,
       daySlotCounts: daySlotCounts,
       totalTodoCount: totalTodoCount,
       completedTodoCount: completedTodoCount,
       completionRate: completionRate,
       updatedAt: new Date().toISOString(),
-      isArchived: isExplicitSave ? true : (existing.isArchived || false)
+      isArchived: isExplicitSave ? true : false
     };
 
-    localStorage.setItem(`planner_${docId}`, JSON.stringify(payload));
-
-    if (isExplicitSave) {
-      setSavedButtonState();
-    }
+    try {
+      await window.setDoc(window.docRef(window.db, 'planners', docId), payload, { merge: true });
+      if (isExplicitSave) setSavedButtonState();
+    } catch(e) { console.error(e); }
   }
 
-  function loadArchiveList() {
+  async function loadArchiveList() {
     const archiveContainer = document.getElementById('archiveList');
     archiveContainer.innerHTML = `<div style="text-align:center; padding: 40px; color: #64748b;">보관된 플래너 데이터를 불러오는 중...</div>`;
 
-    let docsData = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith('planner_')) {
-        try {
-          const item = JSON.parse(localStorage.getItem(key));
-          if (item && item.isArchived) {
-            docsData.push(item);
-          }
-        } catch (e) {
-          console.error(e);
-        }
+    if (!window.db) return;
+
+    try {
+      const querySnapshot = await window.getDocs(window.collection(window.db, 'planners'));
+      let docsData = [];
+      querySnapshot.forEach((doc) => {
+        const item = doc.data();
+        if (item && item.isArchived) docsData.push(item);
+      });
+
+      docsData.sort((a, b) => (b.weekKey || '').localeCompare(a.weekKey || ''));
+      if (window.archiveFilter !== 'all') {
+        docsData = docsData.filter(item => item.owner === window.archiveFilter);
       }
-    }
 
-    docsData.sort((a, b) => (b.weekKey || '').localeCompare(a.weekKey || ''));
+      if (docsData.length === 0) {
+        archiveContainer.innerHTML = `<div style="text-align:center; padding: 50px; color: #94a3b8; font-weight: 600;">저장된 플래너 기록이 없습니다.<br>플래너에서 '저장하기' 버튼을 눌러 기록을 남겨보세요!</div>`;
+        return;
+      }
 
-    if (window.archiveFilter !== 'all') {
-      docsData = docsData.filter(item => item.owner === window.archiveFilter);
-    }
+      let html = '';
+      docsData.forEach(item => {
+        const hours = Math.floor((item.totalMinutes || 0) / 60);
+        const mins = (item.totalMinutes || 0) % 60;
+        const rate = item.completionRate !== undefined ? item.completionRate : 0;
+        const ownerBadge = item.owner === 'sangmin' ? '<span class="owner-tag sangmin">상민</span>' : '<span class="owner-tag soi">소이</span>';
 
-    if (docsData.length === 0) {
-      archiveContainer.innerHTML = `<div style="text-align:center; padding: 50px; color: #94a3b8; font-weight: 600;">저장된 플래너 기록이 없습니다.<br>플래너에서 '저장하기' 버튼을 눌러 기록을 남겨보세요!</div>`;
-      return;
-    }
-
-    let html = '';
-    docsData.forEach(item => {
-      const hours = Math.floor((item.totalMinutes || 0) / 60);
-      const mins = (item.totalMinutes || 0) % 60;
-      const rate = item.completionRate !== undefined ? item.completionRate : 0;
-      const ownerBadge = item.owner === 'sangmin' 
-        ? '<span class="owner-tag sangmin">상민</span>' 
-        : '<span class="owner-tag soi">소이</span>';
-
-      html += `
-        <div class="archive-card" onclick="openArchiveDetail('${item.id}')">
-          <div class="archive-header">
-            <div class="archive-title">${ownerBadge} ${item.dateRange}</div>
-            <div class="archive-sub">${item.weekKey}</div>
-          </div>
-          <div class="archive-stats">
-            <div class="stat-box">
-              <div class="stat-label">총 공부 시간 (칸당 10분)</div>
-              <div class="stat-value">${hours}시간 ${mins}분</div>
+        html += `
+          <div class="archive-card" onclick="openArchiveDetail('${item.id}')">
+            <div class="archive-header">
+              <div class="archive-title">${ownerBadge} ${item.dateRange}</div>
+              <div class="archive-sub">${item.weekKey}</div>
             </div>
-            <div class="stat-box">
-              <div class="stat-label">할 일 달성률</div>
-              <div class="stat-value" style="color: #22c55e;">${rate}%</div>
+            <div class="archive-stats">
+              <div class="stat-box">
+                <div class="stat-label">총 공부 시간</div>
+                <div class="stat-value">${hours}시간 ${mins}분</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">할 일 달성률</div>
+                <div class="stat-value" style="color: #22c55e;">${rate}%</div>
+              </div>
             </div>
+            <div class="archive-footer"><span>상세 기록 보기 ➔</span></div>
           </div>
-          <div class="archive-footer">
-            <span>클릭하여 상세 할 일 및 공부 시간 분석 보기 ➔</span>
-          </div>
-        </div>
-      `;
-    });
+        `;
+      });
 
-    archiveContainer.innerHTML = html;
-    window.archiveDocsCache = docsData;
+      archiveContainer.innerHTML = html;
+      window.archiveDocsCache = docsData;
+    } catch(e) { console.error(e); }
   }
 
   function openArchiveDetail(docId) {
@@ -801,32 +823,22 @@
           if (t.text.trim()) {
             itemsHtml += `
               <div class="modal-todo-item ${t.checked ? 'completed' : ''}">
-                <span class="checkbox-icon">${t.checked ? '✓' : '○'}</span>
-                <span class="todo-text">${t.text}</span>
+                <span>${t.checked ? '✓' : '○'}</span>
+                <span>${t.text}</span>
               </div>
             `;
           }
         });
-
         if (itemsHtml) {
-          todoListHtml += `
-            <div class="modal-day-group">
-              <div class="modal-day-title">${days[dIdx]}요일</div>
-              ${itemsHtml}
-            </div>
-          `;
+          todoListHtml += `<div class="modal-day-group"><div class="modal-day-title">${days[dIdx]}요일</div>${itemsHtml}</div>`;
         }
       });
     }
     document.getElementById('modalTodoList').innerHTML = todoListHtml || '<div style="color:#94a3b8; padding:10px;">기록된 할 일이 없습니다.</div>';
-
     document.getElementById('detailModal').style.display = 'flex';
   }
 
-  function closeArchiveDetail() {
-    document.getElementById('detailModal').style.display = 'none';
-  }
-
+  function closeArchiveDetail() { document.getElementById('detailModal').style.display = 'none'; }
   function filterArchive(filter) {
     window.archiveFilter = filter;
     document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
@@ -869,24 +881,23 @@
     document.querySelectorAll('.todo-item input[type="checkbox"]').forEach(c => c.checked = false);
   }
 
+  // 캘린더 및 시험 일정 (파이어베이스 연동)
+  let unsubscribeCalendar = null;
+
   function renderCalendar() {
     const year = window.calendarDate.getFullYear();
     const month = window.calendarDate.getMonth();
-
     document.getElementById('calendarYearMonth').innerText = `${year}년 ${month + 1}월`;
 
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
-
     const startDayOfWeek = firstDay.getDay(); 
     const totalDays = lastDay.getDate();
-
     const prevMonthLastDay = new Date(year, month, 0).getDate();
 
     const grid = document.getElementById('calendarDaysGrid');
     grid.innerHTML = '';
-
-    const events = getExamEvents();
+    const events = window.calendarEventsCache || [];
 
     for (let i = startDayOfWeek - 1; i >= 0; i--) {
       const d = prevMonthLastDay - i;
@@ -900,27 +911,18 @@
     for (let d = 1; d <= totalDays; d++) {
       const cell = document.createElement('div');
       const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === d;
-      
       const currentCellDate = new Date(year, month, d);
       const dayOfWeek = currentCellDate.getDay();
 
       cell.className = `calendar-cell ${isToday ? 'today' : ''}`;
-      
-      let dateClass = '';
-      if (dayOfWeek === 0) dateClass = 'sun';
-      else if (dayOfWeek === 6) dateClass = 'sat';
-
+      let dateClass = dayOfWeek === 0 ? 'sun' : (dayOfWeek === 6 ? 'sat' : '');
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       cell.onclick = () => openExamModal(dateStr);
 
       let cellHtml = `<div class="cell-date ${dateClass}">${d}</div>`;
-
       const dayEvents = events.filter(e => e.date === dateStr);
       dayEvents.forEach(e => {
-        let badgeClass = '';
-        if (e.type === 'quiz') badgeClass = 'quiz';
-        else if (e.type === 'assignment') badgeClass = 'assignment';
-        
+        let badgeClass = e.type === 'quiz' ? 'quiz' : (e.type === 'assignment' ? 'assignment' : '');
         cellHtml += `<div class="exam-badge ${badgeClass}" title="${e.title}">${e.title}</div>`;
       });
 
@@ -939,6 +941,19 @@
     renderExamCards();
   }
 
+  function initCalendarSync() {
+    if (!window.db) return;
+    if (unsubscribeCalendar) unsubscribeCalendar();
+    unsubscribeCalendar = window.onSnapshot(window.docRef(window.db, 'settings', 'calendar_exams'), (docSnap) => {
+      if (docSnap.exists()) {
+        window.calendarEventsCache = docSnap.data().events || [];
+      } else {
+        window.calendarEventsCache = [];
+      }
+      if (window.currentTab === 'calendar') renderCalendar();
+    });
+  }
+
   function moveCalendarMonth(delta) {
     window.calendarDate.setMonth(window.calendarDate.getMonth() + delta);
     renderCalendar();
@@ -949,20 +964,10 @@
     renderCalendar();
   }
 
-  function getExamEvents() {
-    const raw = localStorage.getItem('calendar_exams');
-    if (!raw) return [];
-    try { return JSON.parse(raw); } catch(e) { return []; }
-  }
-
   function openExamModal(selectedDate) {
-    if (selectedDate) {
-      document.getElementById('examDateInput').value = selectedDate;
-    } else {
-      const today = new Date();
-      const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-      document.getElementById('examDateInput').value = dateStr;
-    }
+    const today = new Date();
+    const dateStr = selectedDate || `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    document.getElementById('examDateInput').value = dateStr;
     document.getElementById('examModal').style.display = 'flex';
   }
 
@@ -972,7 +977,7 @@
     document.getElementById('examMemoInput').value = '';
   }
 
-  function saveExamEvent() {
+  async function saveExamEvent() {
     const title = document.getElementById('examTitleInput').value.trim();
     const date = document.getElementById('examDateInput').value;
     const type = document.getElementById('examTypeInput').value;
@@ -983,26 +988,27 @@
       return;
     }
 
-    const events = getExamEvents();
-    events.push({
-      id: 'exam_' + Date.now(),
-      type, title, date, memo
-    });
+    const events = window.calendarEventsCache || [];
+    events.push({ id: 'exam_' + Date.now(), type, title, date, memo });
 
-    localStorage.setItem('calendar_exams', JSON.stringify(events));
-    closeExamModal();
-    renderCalendar();
+    try {
+      await window.setDoc(window.docRef(window.db, 'settings', 'calendar_exams'), { events });
+      closeExamModal();
+      renderCalendar();
+    } catch(e) { console.error(e); }
   }
 
-  function deleteExamEvent(id) {
-    let events = getExamEvents();
+  async function deleteExamEvent(id) {
+    let events = window.calendarEventsCache || [];
     events = events.filter(e => e.id !== id);
-    localStorage.setItem('calendar_exams', JSON.stringify(events));
-    renderCalendar();
+    try {
+      await window.setDoc(window.docRef(window.db, 'settings', 'calendar_exams'), { events });
+      renderCalendar();
+    } catch(e) { console.error(e); }
   }
 
   function renderExamCards() {
-    const events = getExamEvents();
+    const events = window.calendarEventsCache || [];
     const container = document.getElementById('examCardGrid');
 
     if (events.length === 0) {
@@ -1011,7 +1017,6 @@
     }
 
     events.sort((a,b) => a.date.localeCompare(b.date));
-
     const today = new Date();
     today.setHours(0,0,0,0);
 
@@ -1019,24 +1024,11 @@
     events.forEach(e => {
       const eDate = new Date(e.date);
       eDate.setHours(0,0,0,0);
+      const diffDays = Math.ceil((eDate - today) / (1000 * 60 * 60 * 24));
 
-      const diffTime = eDate - today;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      let ddayText = '';
-      let isPassed = false;
-      if (diffDays === 0) {
-        ddayText = 'D-DAY';
-      } else if (diffDays > 0) {
-        ddayText = `D-${diffDays}`;
-      } else {
-        ddayText = `D+${Math.abs(diffDays)}`;
-        isPassed = true;
-      }
-
-      let typeName = '시험';
-      if (e.type === 'quiz') typeName = '퀴즈';
-      if (e.type === 'assignment') typeName = '과제';
+      let ddayText = diffDays === 0 ? 'D-DAY' : (diffDays > 0 ? `D-${diffDays}` : `D+${Math.abs(diffDays)}`);
+      let isPassed = diffDays < 0;
+      let typeName = e.type === 'quiz' ? '퀴즈' : (e.type === 'assignment' ? '과제' : '시험');
 
       html += `
         <div class="exam-card">
@@ -1048,54 +1040,38 @@
         </div>
       `;
     });
-
     container.innerHTML = html;
   }
 
   function switchTab(tab) {
     window.currentTab = tab;
-
     document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
     document.getElementById(`tab-${tab}`).classList.add('active');
 
-    const plannerView = document.getElementById('plannerView');
-    const progressSangminView = document.getElementById('progressSangminView');
-    const progressSoiView = document.getElementById('progressSoiView');
-    const archiveView = document.getElementById('archiveView');
-    const calendarView = document.getElementById('calendarView');
+    const views = ['plannerView', 'progressSangminView', 'progressSoiView', 'archiveView', 'calendarView'];
+    views.forEach(v => document.getElementById(v).style.display = 'none');
+
     const ownerBadge = document.getElementById('plannerOwnerBadge');
 
-    plannerView.style.display = 'none';
-    progressSangminView.style.display = 'none';
-    progressSoiView.style.display = 'none';
-    archiveView.style.display = 'none';
-    calendarView.style.display = 'none';
-
     if (tab === 'archive') {
-      archiveView.style.display = 'block';
+      document.getElementById('archiveView').style.display = 'block';
       loadArchiveList();
     } else if (tab === 'progress-sangmin') {
-      progressSangminView.style.display = 'block';
+      document.getElementById('progressSangminView').style.display = 'block';
     } else if (tab === 'progress-soi') {
-      progressSoiView.style.display = 'block';
+      document.getElementById('progressSoiView').style.display = 'block';
     } else if (tab === 'calendar') {
-      calendarView.style.display = 'block';
+      document.getElementById('calendarView').style.display = 'block';
       renderCalendar();
     } else {
-      plannerView.style.display = 'block';
-      if (tab === 'sangmin') {
-        ownerBadge.innerText = 'PLANNER (상민)';
-        ownerBadge.style.color = 'var(--primary-sangmin)';
-      } else {
-        ownerBadge.innerText = 'PLANNER (소이)';
-        ownerBadge.style.color = 'var(--primary-soi)';
-      }
+      document.getElementById('plannerView').style.display = 'block';
+      ownerBadge.innerText = tab === 'sangmin' ? 'PLANNER (상민)' : 'PLANNER (소이)';
+      ownerBadge.style.color = tab === 'sangmin' ? 'var(--primary-sangmin)' : 'var(--primary-soi)';
       loadPlannerData();
     }
   }
 
   let isTouching = false;
-
   window.addEventListener('touchstart', (e) => {
     if(e.target.classList.contains('slot-cell')) { isTouching = true; paint(e.target); }
   }, { passive: true });
@@ -1136,10 +1112,11 @@
     loadPlannerData();
   }
 
-  window.onload = () => {
+  window.addEventListener('firebase-ready', () => {
     initProgressTables();
+    initCalendarSync();
     loadPlannerData();
-  };
+  });
 </script>
 </body>
 </html>
