@@ -620,7 +620,7 @@
     saveTimer = setTimeout(() => {
       saveTimer = null;
       savePlannerData(false);
-    }, 400);
+    }, 300);
   }
 
   async function flushSave() {
@@ -636,6 +636,7 @@
   });
   window.addEventListener('pagehide', () => { flushSave(); });
 
+  // 진도표 및 캘린더와 동일하게 고정 문서 구조로 변경하여 공유 및 저장 에러 원천 차단
   async function loadPlannerData() {
     if (window.currentTab === 'archive') {
       loadArchiveList();
@@ -646,7 +647,8 @@
     const weekKey = window.currentWeekInfo.weekKey;
     document.getElementById('currentWeekLabel').innerText = `${window.currentWeekInfo.rangeStr} (${weekKey})`;
 
-    const docId = `${window.currentTab}_${weekKey}`;
+    // 문서 ID를 'sangmin_current' 또는 'soi_current'로 고정하여 모든 기기/사용자가 실시간 동기화되도록 수정
+    const docId = `${window.currentTab}_current`;
 
     window.plannerLoaded = false;
     clearPlannerUI();
@@ -677,7 +679,8 @@
     if (!window.plannerLoaded && !isExplicitSave) return;
 
     const weekKey = window.currentWeekInfo.weekKey;
-    const docId = `${window.currentTab}_${weekKey}`;
+    const docId = `${window.currentTab}_current`;
+    const archiveId = `${window.currentTab}_${weekKey}`;
 
     const weeklyMemos = [];
     document.querySelectorAll('.weekly-memo').forEach(input => {
@@ -719,7 +722,7 @@
     });
 
     const payload = {
-      id: docId,
+      id: archiveId,
       owner: window.currentTab,
       ownerName: window.currentTab === 'sangmin' ? '상민' : '소이',
       weekKey: weekKey,
@@ -738,8 +741,13 @@
     if (isExplicitSave) payload.isArchived = true;
 
     try {
+      // 메인 실시간 공유 문서 저장
       await window.db.collection('planners').doc(docId).set(payload, { merge: true });
-      if (isExplicitSave) setSavedButtonState();
+      // 기출 보관함 저장을 누른 경우 주차별 아카이브 문서도 별도 저장
+      if (isExplicitSave) {
+        await window.db.collection('planners').doc(archiveId).set(payload, { merge: true });
+        setSavedButtonState();
+      }
     } catch(e) { console.error("Save Error:", e); }
   }
 
