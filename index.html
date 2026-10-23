@@ -342,7 +342,6 @@
         </tr>
         <tr>
           <script>
-            // 파스텔톤 색상: 빨강, 노랑, 초록, 하늘, 남색과 파랑 사이의 색(인디고/블루계열 파스텔), 보라
             const colors = ['#ffb7b2', '#fff176', '#c8e6c9', '#b3e5fc', '#c5cae9', '#e1bee7'];
             const days = ['월','화','수','목','금','토','일'];
             for(let d=0; d<7; d++) {
@@ -547,7 +546,7 @@
 
   window.currentTab = 'sangmin';
   window.currentColor = '#ffb7b2';
-  window.currentSelectedDay = 0; // 기본 월요일(0)
+  window.currentSelectedDay = 0; 
   window.archiveFilter = 'sangmin';
   window.calendarDate = new Date();
 
@@ -857,7 +856,8 @@
           const textVal = item.querySelector('input[type="text"]').value.trim();
           const isChecked = item.querySelector('input[type="checkbox"]').checked;
           if (textVal && !isChecked) {
-            uncompletedTodos.push({ dayName: dayNames[dIdx], text: textVal });
+            // Firestore 중첩 배열 에러 방지를 위해 문자열 배열로 직렬화하여 저장
+            uncompletedTodos.push(`${dayNames[dIdx]}: ${textVal}`);
           }
         });
       });
@@ -899,7 +899,10 @@
 
       await window.db.collection('planners').doc(docId).set(newPayload);
       if (uncompletedTodos.length > 0) {
-        renderCarryOverUI(uncompletedTodos);
+        renderCarryOverUI(uncompletedTodos.map(item => {
+          const parts = item.split(': ');
+          return { dayName: parts[0], text: parts.slice(1).join(': ') };
+        }));
       }
       alert('성공적으로 기출 보관함에 백업되었으며, 새 주차 플래너로 초기화되었습니다!');
     } catch(e) {
@@ -1242,25 +1245,23 @@
 
   function setActiveTodo(color, title, dayIdx) {
     window.currentColor = color;
-    window.currentSelectedDay = dayIdx; // 선택된 요일 설정 (0~6)
+    window.currentSelectedDay = dayIdx; 
     document.getElementById('activeColorBadge').style.backgroundColor = color;
     document.getElementById('activeTodoTitle').innerText = title;
   }
 
   function selectEraser() {
     window.currentColor = '#ffffff';
-    // 지우개 선택 시에는 요일 제한 없이 어디든 지울 수 있도록 허용하거나 선택된 요일 유지
     document.getElementById('activeColorBadge').style.backgroundColor = '#ffffff';
     document.getElementById('activeTodoTitle').innerText = '지우개 선택됨';
     document.querySelectorAll('input[name="activeTodo"]').forEach(r => r.checked = false);
   }
 
   function paint(td) {
-    // 🧹 지우개 모드가 아닐 때, 해당 셀이 선택된 요일(컬럼)에 속하는지 엄격히 검사
     if (window.currentColor !== '#ffffff') {
       const slotDayCol = parseInt(td.dataset.dayCol, 10);
       if (slotDayCol !== window.currentSelectedDay) {
-        return; // 다른 요일의 타임테이블은 색칠되지 않도록 차단
+        return; 
       }
     }
     td.style.backgroundColor = window.currentColor; 
