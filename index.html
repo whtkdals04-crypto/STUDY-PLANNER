@@ -18,11 +18,16 @@
       measurementId: "G-6XGSJ880Q4"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
-    window.db = db;
-    window.dispatchEvent(new Event('firebase-ready'));
+    try {
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+      window.db = db;
+      window.addEventListener('DOMContentLoaded', () => {
+        window.dispatchEvent(new Event('firebase-ready'));
+      });
+    } catch (err) {
+      alert("Firebase 초기화 에러: " + err.message);
+    }
   </script>
 
   <style>
@@ -499,7 +504,6 @@
   window.archiveFilter = 'sangmin';
   window.calendarDate = new Date();
 
-  /* ===================== 진도표 ===================== */
   function initProgressTables() {
     const sangminBody = document.getElementById('progressSangminBody');
     let sangminHtml = '';
@@ -572,7 +576,9 @@
     });
     try {
       await window.db.collection('progress').doc(user).set(data);
-    } catch(e) { console.error(e); }
+    } catch(e) {
+      alert("진도표 저장 에러: " + e.message);
+    }
   }
 
   async function loadProgressData(user) {
@@ -593,7 +599,6 @@
     } catch(e) { console.error(e); }
   }
 
-  /* ===================== 플래너 저장/불러오기 (수정됨) ===================== */
   let saveTimer = null;
   let unsubscribePlanner = null;
   window.plannerLoaded = false;
@@ -614,7 +619,6 @@
     }
   }
 
-  // 입력이 바뀌면 0.8초 뒤 저장 (디바운스). 불러오기 전에는 저장 금지.
   function onDataChanged() {
     if (!window.plannerLoaded) return;
     resetSaveButtonState();
@@ -625,7 +629,6 @@
     }, 800);
   }
 
-  // 대기 중인 저장이 있으면 즉시 저장 (탭/주 이동 전에 호출)
   async function flushSave() {
     if (saveTimer) {
       clearTimeout(saveTimer);
@@ -634,7 +637,6 @@
     }
   }
 
-  // 앱을 닫거나 다른 앱으로 전환할 때도 즉시 저장 (아이패드용)
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') flushSave();
   });
@@ -659,10 +661,8 @@
     if (!window.db) return;
 
     unsubscribePlanner = window.db.collection('planners').doc(docId).onSnapshot((docSnap) => {
-      // 내가 방금 쓴 로컬 변경이면 화면을 다시 그리지 않음
       if (docSnap.metadata.hasPendingWrites) return;
 
-      // 입력 중이거나, 아직 저장 안 된 변경이 있으면 덮어쓰지 않음
       const active = document.activeElement;
       const typing = active && active.tagName === 'INPUT' && active.type === 'text';
       const hasUnsaved = !!saveTimer;
@@ -672,7 +672,9 @@
         renderPlannerData(data);
         if (data.isArchived) setSavedButtonState();
       }
-      window.plannerLoaded = true; // 첫 응답 이후부터 저장 허용
+      window.plannerLoaded = true;
+    }, (error) => {
+      alert("플래너 불러오기 에러: " + error.message);
     });
   }
 
@@ -738,14 +740,14 @@
       completionRate: completionRate,
       updatedAt: new Date().toISOString()
     };
-    // 저장하기 버튼을 눌렀을 때만 보관함 표시를 켬 (자동저장이 기존 보관 상태를 해제하지 않도록)
     if (isExplicitSave) payload.isArchived = true;
 
     try {
-      // mergeFields: 적은 필드는 통째로 교체 (지운 칸이 서버에 남지 않음), isArchived는 건드리지 않음
       await window.db.collection('planners').doc(docId).set(payload, { mergeFields: Object.keys(payload) });
       if (isExplicitSave) setSavedButtonState();
-    } catch(e) { console.error(e); }
+    } catch(e) {
+      alert("플래너 저장 에러: " + e.message);
+    }
   }
 
   function renderPlannerData(data) {
@@ -783,7 +785,6 @@
     document.querySelectorAll('.todo-item input[type="checkbox"]').forEach(c => c.checked = false);
   }
 
-  /* ===================== 기출 보관함 ===================== */
   async function loadArchiveList() {
     const archiveContainer = document.getElementById('archiveList');
     archiveContainer.innerHTML = `<div style="text-align:center; padding: 40px; color: #64748b;">보관된 플래너 데이터를 불러오는 중...</div>`;
@@ -902,7 +903,6 @@
     loadArchiveList();
   }
 
-  /* ===================== 캘린더 ===================== */
   let unsubscribeCalendar = null;
 
   function renderCalendar() {
@@ -1015,14 +1015,14 @@
     try {
       await window.db.collection('settings').doc('calendar_exams').set({ events });
       closeExamModal();
-    } catch(e) { console.error(e); }
+    } catch(e) { alert("캘린더 저장 에러: " + e.message); }
   }
 
   async function deleteExamEvent(id) {
     const events = (window.calendarEventsCache || []).filter(e => e.id !== id);
     try {
       await window.db.collection('settings').doc('calendar_exams').set({ events });
-    } catch(e) { console.error(e); }
+    } catch(e) { alert("캘린더 삭제 에러: " + e.message); }
   }
 
   function renderExamCards() {
@@ -1061,10 +1061,8 @@
     container.innerHTML = html;
   }
 
-  /* ===================== 탭 / 주 이동 (수정됨) ===================== */
   async function switchTab(tab) {
-    await flushSave(); // 이동 전에 미저장분을 현재 문서에 먼저 저장
-
+    await flushSave();
     window.currentTab = tab;
     document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
     document.getElementById(`tab-${tab}`).classList.add('active');
@@ -1093,13 +1091,12 @@
   }
 
   async function changeWeek(daysNav) {
-    await flushSave(); // 주 이동 전에 미저장분 먼저 저장
+    await flushSave();
     window.currentDate.setDate(window.currentDate.getDate() + daysNav);
     window.currentWeekInfo = getWeekInfo(window.currentDate);
     loadPlannerData();
   }
 
-  /* ===================== 시간표 칠하기 ===================== */
   let isTouching = false;
   window.addEventListener('touchstart', (e) => {
     if(e.target.classList.contains('slot-cell')) { isTouching = true; paint(e.target); }
@@ -1109,7 +1106,7 @@
     if (!isTouching) return;
     const touch = e.touches[0];
     const target = document.elementFromPoint(touch.clientX, touch.clientY);
-    if (target && target.classList.contains('slot-cell')) { paint(target); }
+    if (target && target.classList.0 && target.classList.contains('slot-cell')) { paint(target); }
   }, { passive: true });
 
   window.addEventListener('touchend', () => { if(isTouching) { isTouching = false; onDataChanged(); } });
