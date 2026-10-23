@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>STUDY PLANNER & PROGRESS TRACKER</title>
-  <!-- Firebase SDK 추가 -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
+  <!-- Firebase 구형 콤팩트 SDK 추가 (아이패드 호환성 최적화) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
+  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyAQaQi17WTVvssfnmaqEIMU9tWfWTdpps8",
       authDomain: "study-planner-a951e.firebaseapp.com",
@@ -19,19 +19,10 @@
       measurementId: "G-6XGSJ880Q4"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-    // 전역으로 파이어베이스 함수 노출
     window.db = db;
-    window.docRef = doc;
-    window.setDoc = setDoc;
-    window.getDoc = getDoc;
-    window.onSnapshot = onSnapshot;
-    window.collection = collection;
-    window.getDocs = getDocs;
-
-    // 파이어베이스 로드 완료 후 초기 데이터 불러오기 실행
     window.dispatchEvent(new Event('firebase-ready'));
   </script>
 
@@ -361,7 +352,7 @@
       </thead>
       <tbody id="progressSangminBody"></tbody>
     </table>
-    <div class="progress-footer">칸을 누를 때마다 획수가 증가합니다.</div>
+    <div class="progress-footer">칸을 누를 때마다 회독 수가 증가합니다.</div>
   </div>
 
   <div id="progressSoiView" class="progress-container" style="display: none;">
@@ -509,7 +500,6 @@
   window.archiveFilter = 'sangmin';
   window.calendarDate = new Date();
 
-  // 파이어베이스 진도표 로드 및 저장
   function initProgressTables() {
     const sangminBody = document.getElementById('progressSangminBody');
     let sangminHtml = '';
@@ -586,15 +576,15 @@
       data[key] = cell.dataset.count || '0';
     });
     try {
-      await window.setDoc(window.docRef(window.db, 'progress', user), data);
+      await window.db.collection('progress').doc(user).set(data);
     } catch(e) { console.error(e); }
   }
 
   async function loadProgressData(user) {
     if (!window.db) return;
     try {
-      const docSnap = await window.getDoc(window.docRef(window.db, 'progress', user));
-      if (docSnap.exists()) {
+      const docSnap = await window.db.collection('progress').doc(user).get();
+      if (docSnap.exists) {
         const data = docSnap.data();
         Object.keys(data).forEach(key => {
           const [uIdx, cIdx] = key.split('_');
@@ -648,8 +638,8 @@
 
     if (!window.db) return;
 
-    unsubscribePlanner = window.onSnapshot(window.docRef(window.db, 'planners', docId), (docSnap) => {
-      if (docSnap.exists()) {
+    unsubscribePlanner = window.db.collection('planners').doc(docId).onSnapshot((docSnap) => {
+      if (docSnap.exists) {
         const data = docSnap.data();
         renderPlannerData(data);
         if (data.isArchived) {
@@ -723,7 +713,7 @@
     };
 
     try {
-      await window.setDoc(window.docRef(window.db, 'planners', docId), payload, { merge: true });
+      await window.db.collection('planners').doc(docId).set(payload, { merge: true });
       if (isExplicitSave) setSavedButtonState();
     } catch(e) { console.error(e); }
   }
@@ -735,7 +725,7 @@
     if (!window.db) return;
 
     try {
-      const querySnapshot = await window.getDocs(window.collection(window.db, 'planners'));
+      const querySnapshot = await window.db.collection('planners').get();
       let docsData = [];
       querySnapshot.forEach((doc) => {
         const item = doc.data();
@@ -881,7 +871,6 @@
     document.querySelectorAll('.todo-item input[type="checkbox"]').forEach(c => c.checked = false);
   }
 
-  // 캘린더 및 시험 일정 (파이어베이스 연동)
   let unsubscribeCalendar = null;
 
   function renderCalendar() {
@@ -944,8 +933,8 @@
   function initCalendarSync() {
     if (!window.db) return;
     if (unsubscribeCalendar) unsubscribeCalendar();
-    unsubscribeCalendar = window.onSnapshot(window.docRef(window.db, 'settings', 'calendar_exams'), (docSnap) => {
-      if (docSnap.exists()) {
+    unsubscribeCalendar = window.db.collection('settings').doc('calendar_exams').onSnapshot((docSnap) => {
+      if (docSnap.exists) {
         window.calendarEventsCache = docSnap.data().events || [];
       } else {
         window.calendarEventsCache = [];
@@ -992,7 +981,7 @@
     events.push({ id: 'exam_' + Date.now(), type, title, date, memo });
 
     try {
-      await window.setDoc(window.docRef(window.db, 'settings', 'calendar_exams'), { events });
+      await window.db.collection('settings').doc('calendar_exams').set({ events });
       closeExamModal();
       renderCalendar();
     } catch(e) { console.error(e); }
@@ -1002,7 +991,7 @@
     let events = window.calendarEventsCache || [];
     events = events.filter(e => e.id !== id);
     try {
-      await window.setDoc(window.docRef(window.db, 'settings', 'calendar_exams'), { events });
+      await window.db.collection('settings').doc('calendar_exams').set({ events });
       renderCalendar();
     } catch(e) { console.error(e); }
   }
