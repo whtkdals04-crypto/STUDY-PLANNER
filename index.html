@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>STUDY PLANNER & PROGRESS TRACKER</title>
-  <!-- Firebase 구형 콤팩트 SDK 추가 (아이패드 호환성 최적화) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
@@ -123,7 +122,7 @@
     .slot-cell { height: 16px; cursor: pointer; border-right: 1px dashed var(--border-dashed); }
     .slot-cell:nth-child(3n) { border-right: 1px solid var(--border-light); }
     .slot-cell:last-child { border-right: none; }
-    
+
     tbody#gridBody tr { border-bottom: 1px solid var(--border-light); }
 
     .progress-container { padding: 20px; background: #ffffff; overflow-x: auto; }
@@ -140,7 +139,7 @@
     .progress-cell:hover { background: #f1f5f9; }
     .progress-cell.marked-sangmin { background: #e0e7ff; color: #3730a3; }
     .progress-cell.marked-soi { background: #fef3c7; color: #92400e; }
-    
+
     .progress-footer { margin-top: 12px; font-size: 11px; color: #64748b; font-weight: 600; text-align: right; }
 
     .archive-container { padding: 20px; background: #f8fafc; min-height: 500px; }
@@ -172,7 +171,7 @@
     .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
     .calendar-month-title { font-size: 20px; font-weight: 900; color: #0f172a; display: flex; align-items: center; gap: 8px; }
     .add-exam-btn { background: #059669; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 800; font-size: 12px; cursor: pointer; }
-    
+
     .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); border-top: 2px solid var(--border); border-left: 1px solid var(--border-light); }
     .calendar-day-head { background: #f1f5f9; padding: 8px; text-align: center; font-weight: 800; font-size: 11px; border-right: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light); }
     .calendar-day-head.sun { color: #ef4444; }
@@ -183,7 +182,7 @@
     .cell-date { font-weight: 800; font-size: 11px; color: #334155; margin-bottom: 4px; }
     .cell-date.sun { color: #ef4444; }
     .cell-date.sat { color: #3b82f6; }
-    
+
     .exam-badge { background: #fee2e2; border-left: 3px solid #ef4444; color: #991b1b; padding: 2px 4px; border-radius: 3px; font-size: 10px; font-weight: 800; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .exam-badge.quiz { background: #fef3c7; border-left-color: #f59e0b; color: #92400e; }
     .exam-badge.assignment { background: #e0e7ff; border-left-color: #6366f1; color: #3730a3; }
@@ -214,7 +213,7 @@
     .form-group label { display: block; font-size: 11px; font-weight: 800; color: #475569; margin-bottom: 4px; }
     .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 12px; outline: none; }
     .form-submit-btn { width: 100%; padding: 10px; background: #059669; color: white; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; margin-top: 10px; }
-    
+
     .day-time-pill { background: #e2e8f0; padding: 4px 8px; border-radius: 6px; font-size: 11px; margin-right: 4px; margin-bottom: 4px; display: inline-block; }
     .modal-day-group { margin-bottom: 14px; border-bottom: 1px dashed #e2e8f0; padding-bottom: 8px; }
     .modal-day-title { font-weight: 800; font-size: 12px; color: #3b82f6; margin-bottom: 6px; }
@@ -478,7 +477,7 @@
     date.setHours(0, 0, 0, 0);
     const day = date.getDay();
     const diffToMon = date.getDate() - day + (day === 0 ? -6 : 1);
-    
+
     const mon = new Date(date.setDate(diffToMon));
     const sun = new Date(mon);
     sun.setDate(mon.getDate() + 6);
@@ -500,6 +499,7 @@
   window.archiveFilter = 'sangmin';
   window.calendarDate = new Date();
 
+  /* ===================== 진도표 ===================== */
   function initProgressTables() {
     const sangminBody = document.getElementById('progressSangminBody');
     let sangminHtml = '';
@@ -529,7 +529,6 @@
 
   async function toggleProgressCell(td) {
     const user = td.dataset.user;
-    const unit = td.dataset.unit;
     const col = td.dataset.col;
     let count = parseInt(td.dataset.count || '0', 10);
 
@@ -557,11 +556,7 @@
 
     if (user === 'sangmin') {
       td.classList.add('marked-sangmin');
-      if (col === 0) {
-        td.innerText = '✓';
-      } else {
-        td.innerText = SANGMIN_MARKS[count];
-      }
+      td.innerText = (col === 0) ? '✓' : SANGMIN_MARKS[count];
     } else {
       td.classList.add('marked-soi');
       td.innerText = SOI_MARKS[count];
@@ -598,6 +593,11 @@
     } catch(e) { console.error(e); }
   }
 
+  /* ===================== 플래너 저장/불러오기 (수정됨) ===================== */
+  let saveTimer = null;
+  let unsubscribePlanner = null;
+  window.plannerLoaded = false;
+
   function resetSaveButtonState() {
     const saveBtn = document.getElementById('saveBtn');
     if (saveBtn) {
@@ -614,12 +614,31 @@
     }
   }
 
+  // 입력이 바뀌면 0.8초 뒤 저장 (디바운스). 불러오기 전에는 저장 금지.
   function onDataChanged() {
+    if (!window.plannerLoaded) return;
     resetSaveButtonState();
-    savePlannerData(false);
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      saveTimer = null;
+      savePlannerData(false);
+    }, 800);
   }
 
-  let unsubscribePlanner = null;
+  // 대기 중인 저장이 있으면 즉시 저장 (탭/주 이동 전에 호출)
+  async function flushSave() {
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      await savePlannerData(false);
+    }
+  }
+
+  // 앱을 닫거나 다른 앱으로 전환할 때도 즉시 저장 (아이패드용)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushSave();
+  });
+  window.addEventListener('pagehide', () => { flushSave(); });
 
   async function loadPlannerData() {
     if (window.currentTab === 'archive') {
@@ -630,27 +649,36 @@
     resetSaveButtonState();
     const weekKey = window.currentWeekInfo.weekKey;
     document.getElementById('currentWeekLabel').innerText = `${window.currentWeekInfo.rangeStr} (${weekKey})`;
-    
+
     const docId = `${window.currentTab}_${weekKey}`;
+
+    window.plannerLoaded = false;
     clearPlannerUI();
 
     if (unsubscribePlanner) unsubscribePlanner();
-
     if (!window.db) return;
 
     unsubscribePlanner = window.db.collection('planners').doc(docId).onSnapshot((docSnap) => {
-      if (docSnap.exists) {
+      // 내가 방금 쓴 로컬 변경이면 화면을 다시 그리지 않음
+      if (docSnap.metadata.hasPendingWrites) return;
+
+      // 입력 중이거나, 아직 저장 안 된 변경이 있으면 덮어쓰지 않음
+      const active = document.activeElement;
+      const typing = active && active.tagName === 'INPUT' && active.type === 'text';
+      const hasUnsaved = !!saveTimer;
+
+      if (docSnap.exists && !typing && !hasUnsaved) {
         const data = docSnap.data();
         renderPlannerData(data);
-        if (data.isArchived) {
-          setSavedButtonState();
-        }
+        if (data.isArchived) setSavedButtonState();
       }
+      window.plannerLoaded = true; // 첫 응답 이후부터 저장 허용
     });
   }
 
   async function savePlannerData(isExplicitSave = false) {
     if (['archive', 'progress-sangmin', 'progress-soi', 'calendar'].includes(window.currentTab) || !window.db) return;
+    if (!window.plannerLoaded && !isExplicitSave) return;
 
     const weekKey = window.currentWeekInfo.weekKey;
     const docId = `${window.currentTab}_${weekKey}`;
@@ -708,16 +736,54 @@
       totalTodoCount: totalTodoCount,
       completedTodoCount: completedTodoCount,
       completionRate: completionRate,
-      updatedAt: new Date().toISOString(),
-      isArchived: isExplicitSave ? true : false
+      updatedAt: new Date().toISOString()
     };
+    // 저장하기 버튼을 눌렀을 때만 보관함 표시를 켬 (자동저장이 기존 보관 상태를 해제하지 않도록)
+    if (isExplicitSave) payload.isArchived = true;
 
     try {
-      await window.db.collection('planners').doc(docId).set(payload, { merge: true });
+      // mergeFields: 적은 필드는 통째로 교체 (지운 칸이 서버에 남지 않음), isArchived는 건드리지 않음
+      await window.db.collection('planners').doc(docId).set(payload, { mergeFields: Object.keys(payload) });
       if (isExplicitSave) setSavedButtonState();
     } catch(e) { console.error(e); }
   }
 
+  function renderPlannerData(data) {
+    clearPlannerUI();
+    if (data.weeklyMemos) {
+      document.querySelectorAll('.weekly-memo').forEach((input, idx) => {
+        if (data.weeklyMemos[idx]) input.value = data.weeklyMemos[idx];
+      });
+    }
+    if (data.todos) {
+      document.querySelectorAll('.todo-cell').forEach((cell, cellIdx) => {
+        const items = cell.querySelectorAll('.todo-item');
+        if (data.todos[cellIdx]) {
+          data.todos[cellIdx].forEach((itemData, itemIdx) => {
+            if (items[itemIdx]) {
+              items[itemIdx].querySelector('input[type="checkbox"]').checked = itemData.checked;
+              items[itemIdx].querySelector('input[type="text"]').value = itemData.text;
+            }
+          });
+        }
+      });
+    }
+    if (data.slots) {
+      Object.keys(data.slots).forEach(id => {
+        const slot = document.querySelector(`[data-slot-id="${id}"]`);
+        if (slot) slot.style.backgroundColor = data.slots[id];
+      });
+    }
+  }
+
+  function clearPlannerUI() {
+    document.querySelectorAll('.weekly-memo').forEach(i => i.value = '');
+    document.querySelectorAll('.slot-cell').forEach(s => s.style.backgroundColor = '');
+    document.querySelectorAll('.todo-item input[type="text"]').forEach(i => i.value = '');
+    document.querySelectorAll('.todo-item input[type="checkbox"]').forEach(c => c.checked = false);
+  }
+
+  /* ===================== 기출 보관함 ===================== */
   async function loadArchiveList() {
     const archiveContainer = document.getElementById('archiveList');
     archiveContainer.innerHTML = `<div style="text-align:center; padding: 40px; color: #64748b;">보관된 플래너 데이터를 불러오는 중...</div>`;
@@ -779,7 +845,7 @@
     const item = (window.archiveDocsCache || []).find(d => d.id === docId);
     if (!item) return;
 
-    const days = ['월', '화', '수', '목', '금', '토', '일'];
+    const dayNames = ['월', '화', '수', '목', '금', '토', '일'];
     const hours = Math.floor((item.totalMinutes || 0) / 60);
     const mins = (item.totalMinutes || 0) % 60;
 
@@ -792,7 +858,7 @@
         const dMins = cnt * 10;
         const dH = Math.floor(dMins / 60);
         const dM = dMins % 60;
-        dayTimeHtml += `<div class="day-time-pill"><b>${days[idx]}:</b> ${dH > 0 ? dH + '시간 ' : ''}${dM}분</div>`;
+        dayTimeHtml += `<div class="day-time-pill"><b>${dayNames[idx]}:</b> ${dH > 0 ? dH + '시간 ' : ''}${dM}분</div>`;
       });
     }
     document.getElementById('modalDayTimes').innerHTML = dayTimeHtml;
@@ -820,7 +886,7 @@
           }
         });
         if (itemsHtml) {
-          todoListHtml += `<div class="modal-day-group"><div class="modal-day-title">${days[dIdx]}요일</div>${itemsHtml}</div>`;
+          todoListHtml += `<div class="modal-day-group"><div class="modal-day-title">${dayNames[dIdx]}요일</div>${itemsHtml}</div>`;
         }
       });
     }
@@ -836,41 +902,7 @@
     loadArchiveList();
   }
 
-  function renderPlannerData(data) {
-    clearPlannerUI();
-    if (data.weeklyMemos) {
-      document.querySelectorAll('.weekly-memo').forEach((input, idx) => {
-        if (data.weeklyMemos[idx]) input.value = data.weeklyMemos[idx];
-      });
-    }
-    if (data.todos) {
-      document.querySelectorAll('.todo-cell').forEach((cell, cellIdx) => {
-        const items = cell.querySelectorAll('.todo-item');
-        if (data.todos[cellIdx]) {
-          data.todos[cellIdx].forEach((itemData, itemIdx) => {
-            if (items[itemIdx]) {
-              items[itemIdx].querySelector('input[type="checkbox"]').checked = itemData.checked;
-              items[itemIdx].querySelector('input[type="text"]').value = itemData.text;
-            }
-          });
-        }
-      });
-    }
-    if (data.slots) {
-      Object.keys(data.slots).forEach(id => {
-        const slot = document.querySelector(`[data-slot-id="${id}"]`);
-        if (slot) slot.style.backgroundColor = data.slots[id];
-      });
-    }
-  }
-
-  function clearPlannerUI() {
-    document.querySelectorAll('.weekly-memo').forEach(i => i.value = '');
-    document.querySelectorAll('.slot-cell').forEach(s => s.style.backgroundColor = '');
-    document.querySelectorAll('.todo-item input[type="text"]').forEach(i => i.value = '');
-    document.querySelectorAll('.todo-item input[type="checkbox"]').forEach(c => c.checked = false);
-  }
-
+  /* ===================== 캘린더 ===================== */
   let unsubscribeCalendar = null;
 
   function renderCalendar() {
@@ -880,7 +912,7 @@
 
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
-    const startDayOfWeek = firstDay.getDay(); 
+    const startDayOfWeek = firstDay.getDay();
     const totalDays = lastDay.getDate();
     const prevMonthLastDay = new Date(year, month, 0).getDate();
 
@@ -955,7 +987,7 @@
 
   function openExamModal(selectedDate) {
     const today = new Date();
-    const dateStr = selectedDate || `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const dateStr = (typeof selectedDate === 'string' && selectedDate) ? selectedDate : `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     document.getElementById('examDateInput').value = dateStr;
     document.getElementById('examModal').style.display = 'flex';
   }
@@ -977,27 +1009,24 @@
       return;
     }
 
-    const events = window.calendarEventsCache || [];
+    const events = (window.calendarEventsCache || []).slice();
     events.push({ id: 'exam_' + Date.now(), type, title, date, memo });
 
     try {
       await window.db.collection('settings').doc('calendar_exams').set({ events });
       closeExamModal();
-      renderCalendar();
     } catch(e) { console.error(e); }
   }
 
   async function deleteExamEvent(id) {
-    let events = window.calendarEventsCache || [];
-    events = events.filter(e => e.id !== id);
+    const events = (window.calendarEventsCache || []).filter(e => e.id !== id);
     try {
       await window.db.collection('settings').doc('calendar_exams').set({ events });
-      renderCalendar();
     } catch(e) { console.error(e); }
   }
 
   function renderExamCards() {
-    const events = window.calendarEventsCache || [];
+    const events = (window.calendarEventsCache || []).slice();
     const container = document.getElementById('examCardGrid');
 
     if (events.length === 0) {
@@ -1032,7 +1061,10 @@
     container.innerHTML = html;
   }
 
-  function switchTab(tab) {
+  /* ===================== 탭 / 주 이동 (수정됨) ===================== */
+  async function switchTab(tab) {
+    await flushSave(); // 이동 전에 미저장분을 현재 문서에 먼저 저장
+
     window.currentTab = tab;
     document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
     document.getElementById(`tab-${tab}`).classList.add('active');
@@ -1060,6 +1092,14 @@
     }
   }
 
+  async function changeWeek(daysNav) {
+    await flushSave(); // 주 이동 전에 미저장분 먼저 저장
+    window.currentDate.setDate(window.currentDate.getDate() + daysNav);
+    window.currentWeekInfo = getWeekInfo(window.currentDate);
+    loadPlannerData();
+  }
+
+  /* ===================== 시간표 칠하기 ===================== */
   let isTouching = false;
   window.addEventListener('touchstart', (e) => {
     if(e.target.classList.contains('slot-cell')) { isTouching = true; paint(e.target); }
@@ -1073,7 +1113,7 @@
   }, { passive: true });
 
   window.addEventListener('touchend', () => { if(isTouching) { isTouching = false; onDataChanged(); } });
-  
+
   document.querySelectorAll('.slot-cell').forEach(cell => {
     cell.addEventListener('mousedown', () => { isTouching = true; paint(cell); });
     cell.addEventListener('mouseenter', () => { if (isTouching) paint(cell); });
@@ -1094,12 +1134,6 @@
   }
 
   function paint(td) { td.style.backgroundColor = window.currentColor; }
-
-  function changeWeek(daysNav) {
-    window.currentDate.setDate(window.currentDate.getDate() + daysNav);
-    window.currentWeekInfo = getWeekInfo(window.currentDate);
-    loadPlannerData();
-  }
 
   window.addEventListener('firebase-ready', () => {
     initProgressTables();
