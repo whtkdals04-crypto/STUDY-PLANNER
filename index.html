@@ -36,8 +36,6 @@
       --text-muted: #475569;
       --primary-sangmin: #3b82f6;
       --primary-soi: #ec4899;
-      --bg-sangmin: #f0f5ff;
-      --bg-soi: #fff0f6;
     }
     * { box-sizing: border-box; touch-action: manipulation; }
     body {
@@ -79,16 +77,10 @@
       background: #ffffff;
     }
     .main-title { font-size: 18px; font-weight: 900; letter-spacing: 1.5px; color: #0f172a; display: flex; align-items: center; gap: 8px; }
-
     .planner-actions { display: flex; align-items: center; gap: 8px; }
-    .auto-save-status {
-      font-size: 11px; font-weight: 800; color: #22c55e;
-      background: #f0fdf4; border: 1px solid #bbf7d0; padding: 6px 10px; border-radius: 8px;
-      display: flex; align-items: center; gap: 4px;
-    }
 
     .reset-btn {
-      background: #f1f5f9; color: #475569; border: 1.5px solid var(--border-light); padding: 7px 12px;
+      background: #f1f5f9; color: #475569; border: 1.5px solid var(--border-light); padding: 7px 14px;
       border-radius: 8px; font-weight: 800; font-size: 12px; cursor: pointer;
       display: flex; align-items: center; gap: 4px; transition: all 0.2s;
     }
@@ -99,17 +91,18 @@
     @media (max-width: 768px) { .memo-split-container { grid-template-columns: 1fr; gap: 10px; } }
 
     .memo-box { background: #ffffff; border: 1.5px solid var(--border-light); border-radius: 8px; padding: 10px; }
-    .memo-box.must-do { border-color: #fecdd3; background: #fff5f5; }
     .memo-title { font-size: 11px; font-weight: 800; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center; }
-    .memo-box.must-do .memo-title { color: #e11d48; }
+
+    .memo-box.next-week { border-color: #bbf7d0; background: #f0fdf4; }
+    .memo-box.next-week .memo-title { color: #15803d; }
+    .memo-box.next-week .memo-item input { border-bottom-color: #86efac; }
+    .memo-box.next-week .memo-item input:focus { border-bottom-color: #15803d; }
 
     .memo-grid-3x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
     .memo-item { display: flex; align-items: center; font-size: 11px; }
     .memo-item span { width: 16px; font-weight: 800; color: #475569; }
     .memo-item input { width: 100%; border: none; border-bottom: 1.5px solid var(--border-light); font-size: 11px; outline: none; background: transparent; padding: 2px 4px; color: var(--text); }
     .memo-item input:focus { border-bottom-color: #0f172a; }
-    .memo-box.must-do .memo-item input { border-bottom-color: #fca5a5; }
-    .memo-box.must-do .memo-item input:focus { border-bottom-color: #e11d48; }
 
     .carry-over-box {
       background: #eff6ff; border: 1.5px dashed #bfdbfe; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px;
@@ -128,7 +121,8 @@
 
     .table { width: 100%; border-collapse: collapse; table-layout: fixed; }
     .table th, .table td { border: 1px solid var(--border-light); text-align: center; padding: 0; font-size: 10px; }
-    .table th { background: #f1f5f9; font-weight: 800; color: var(--text); height: 28px; border-bottom: 2px solid var(--border); }
+    .table th { background: #f1f5f9; font-weight: 800; color: var(--text); height: 34px; border-bottom: 2px solid var(--border); vertical-align: middle; }
+    .th-date { display: block; font-size: 9px; font-weight: 700; color: #64748b; margin-top: 1px; }
 
     .todo-cell { height: 155px; text-align: left; padding: 5px; vertical-align: top; background: #ffffff; }
     .todo-item { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; border-radius: 5px; padding: 3px 6px; border: 1px solid rgba(0,0,0,0.06); }
@@ -184,7 +178,10 @@
     .stat-box { flex: 1; text-align: center; }
     .stat-label { font-size: 9px; font-weight: 700; color: #64748b; margin-bottom: 2px; }
     .stat-value { font-size: 14px; font-weight: 900; color: #0f172a; }
-    .archive-footer { font-size: 11px; color: #3b82f6; font-weight: 700; text-align: right; }
+    .archive-footer { font-size: 11px; color: #3b82f6; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+    .archive-delete-btn { background: none; border: 1.5px solid #fecaca; color: #ef4444; font-size: 11px; font-weight: 800; border-radius: 6px; padding: 3px 8px; cursor: pointer; }
+    .archive-delete-btn:hover { background: #fef2f2; }
+    .modal-delete-btn { width: 100%; margin-top: 16px; padding: 10px; background: #fff; color: #ef4444; border: 1.5px solid #fecaca; border-radius: 8px; font-weight: 800; cursor: pointer; }
 
     .calendar-container { padding: 20px; background: #ffffff; }
     .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
@@ -270,18 +267,15 @@
         <span id="plannerOwnerBadge" style="color: var(--primary-sangmin);">PLANNER (상민)</span>
       </div>
       <div class="planner-actions">
-        <div class="auto-save-status">
-          <span>⚡ 자동 저장 활성화</span>
-        </div>
-        <button id="resetWeekBtn" class="reset-btn" onclick="prepareNextWeek()" title="다음 주 준비 (기출 자동 백업, 미완료 할 일 이월 및 리셋)">
-          🔄 다음 주 준비
+        <button id="resetWeekBtn" class="reset-btn" onclick="prepareNextWeek()" title="기출 자동 백업, 미완료 할 일 이월, NEXT WEEK 메모를 새 주 목표로 이동 후 리셋">
+          Here We go~!
         </button>
       </div>
     </div>
 
     <div class="memo-section">
       <div id="carryOverContainer" class="carry-over-box">
-        <div class="carry-over-title">📥 저번 주 미완료 이월 과제 (Must-Do)</div>
+        <div class="carry-over-title">📥 저번 주 미완료 이월 과제</div>
         <div id="carryOverList" class="carry-over-list"></div>
       </div>
 
@@ -305,10 +299,10 @@
           </div>
         </div>
 
-        <div class="memo-box must-do">
+        <div class="memo-box next-week">
           <div class="memo-title">
-            <span>MUST-DO🤬</span>
-            <span style="font-size:10px; color:#e11d48; font-weight:600;">필수 실천 과제</span>
+            <span>NEXT WEEK</span>
+            <span style="font-size:10px; color:#15803d; font-weight:600;">다음 주 목표로 자동 이동</span>
           </div>
           <div class="memo-grid-3x2">
             <script>
@@ -316,7 +310,7 @@
                 document.write(`
                   <div class="memo-item">
                     <span>${i}.</span>
-                    <input type="text" class="mustdo-memo" placeholder="필수과제 입력..." oninput="onDataChanged()">
+                    <input type="text" class="nextweek-memo" placeholder="다음 주 계획..." oninput="onDataChanged()">
                   </div>
                 `);
               }
@@ -336,7 +330,7 @@
     <table class="table">
       <thead>
         <tr>
-          <th>MON</th><th>TUE</th><th>WED</th><th>THU</th><th>FRI</th><th>SAT</th><th>SUN</th>
+          <th>MON<span class="th-date" data-d="0"></span></th><th>TUE<span class="th-date" data-d="1"></span></th><th>WED<span class="th-date" data-d="2"></span></th><th>THU<span class="th-date" data-d="3"></span></th><th>FRI<span class="th-date" data-d="4"></span></th><th>SAT<span class="th-date" data-d="5"></span></th><th>SUN<span class="th-date" data-d="6"></span></th>
         </tr>
         <tr>
           <script>
@@ -367,7 +361,7 @@
       <thead>
         <tr>
           <th class="time-col">TIME</th>
-          <th>MON</th><th>TUE</th><th>WED</th><th>THU</th><th>FRI</th><th>SAT</th><th>SUN</th>
+          <th>MON<span class="th-date" data-d="0"></span></th><th>TUE<span class="th-date" data-d="1"></span></th><th>WED<span class="th-date" data-d="2"></span></th><th>THU<span class="th-date" data-d="3"></span></th><th>FRI<span class="th-date" data-d="4"></span></th><th>SAT<span class="th-date" data-d="5"></span></th><th>SUN<span class="th-date" data-d="6"></span></th>
         </tr>
       </thead>
       <tbody id="gridBody">
@@ -497,12 +491,13 @@
       <div id="modalDayTimes" style="display: flex; flex-wrap: wrap;"></div>
     </div>
     <div style="margin-bottom: 16px;">
-      <div style="font-size: 12px; font-weight: 800; color: #0f172a; margin-bottom: 6px;">🎯 위클리 목표 & Must-Do</div>
+      <div style="font-size: 12px; font-weight: 800; color: #0f172a; margin-bottom: 6px;">🎯 위클리 목표 & 다음 주 메모</div>
       <ul id="modalMemos" style="margin: 0; padding-left: 18px; font-size: 12px; color: #334155;"></ul>
     </div>
     <div>
       <div style="font-size: 12px; font-weight: 800; color: #0f172a; margin-bottom: 8px;">📋 요일별 할 일 목록</div>
       <div id="modalTodoList"></div>
+      <button id="modalDeleteBtn" class="modal-delete-btn">🗑 이 기록 삭제</button>
     </div>
   </div>
 </div>
@@ -541,6 +536,28 @@
 
     return { weekKey, rangeStr };
   }
+
+  // 요일 헤더 날짜 + 주차 라벨을 기기 시계 기준으로 갱신
+  function updateDateHeaders() {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    const day = d.getDay();
+    const mon = new Date(d);
+    mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+    document.querySelectorAll('.th-date').forEach(el => {
+      const t = new Date(mon);
+      t.setDate(mon.getDate() + parseInt(el.dataset.d, 10));
+      el.textContent = `${t.getMonth() + 1}/${t.getDate()}`;
+    });
+    const { weekKey, rangeStr } = getCurrentWeekKeyAndRange();
+    const r = document.getElementById('currentWeekRange');
+    if (r) r.innerText = `${rangeStr} (${weekKey})`;
+  }
+  updateDateHeaders();
+  setInterval(updateDateHeaders, 60000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') updateDateHeaders();
+  });
 
   window.currentTab = 'sangmin';
   window.currentColor = '#ffb7b2';
@@ -690,8 +707,7 @@
       return;
     }
 
-    const { weekKey, rangeStr } = getCurrentWeekKeyAndRange();
-    document.getElementById('currentWeekRange').innerText = `${rangeStr} (${weekKey})`;
+    updateDateHeaders();
 
     const docId = `${window.currentTab}_current`;
 
@@ -734,9 +750,9 @@
       weeklyMemos.push(input.value);
     });
 
-    const mustDoMemos = [];
-    document.querySelectorAll('.mustdo-memo').forEach(input => {
-      mustDoMemos.push(input.value);
+    const nextWeekMemos = [];
+    document.querySelectorAll('.nextweek-memo').forEach(input => {
+      nextWeekMemos.push(input.value);
     });
 
     // Firestore는 중첩 배열 불가 → 요일별로 { items: [...] } 객체로 감싸서 저장
@@ -775,13 +791,12 @@
     });
 
     const payload = {
-      id: isExplicitSave ? archiveId : docId,
       owner: window.currentTab,
       ownerName: window.currentTab === 'sangmin' ? '상민' : '소이',
       weekKey: weekKey,
       dateRange: rangeStr,
       weeklyMemos: weeklyMemos,
-      mustDoMemos: mustDoMemos,
+      nextWeekMemos: nextWeekMemos,
       todos: todos,
       slots: slotData,
       totalSlots: totalPaintedSlots,
@@ -796,7 +811,7 @@
     try {
       if (isExplicitSave) {
         // 기출 보관함용 복사본
-        await window.db.collection('planners').doc(archiveId).set({ ...payload, isArchived: true });
+        await window.db.collection('planners').doc(archiveId).set({ ...payload, id: archiveId, isArchived: true });
       }
       // 현재 문서: merge 없이 통째로 덮어써야 지운 시간칸이 서버에서도 사라짐
       await window.db.collection('planners').doc(docId).set({
@@ -818,9 +833,9 @@
         if (data.weeklyMemos[idx]) input.value = data.weeklyMemos[idx];
       });
     }
-    if (data.mustDoMemos) {
-      document.querySelectorAll('.mustdo-memo').forEach((input, idx) => {
-        if (data.mustDoMemos[idx]) input.value = data.mustDoMemos[idx];
+    if (data.nextWeekMemos) {
+      document.querySelectorAll('.nextweek-memo').forEach((input, idx) => {
+        if (data.nextWeekMemos[idx]) input.value = data.nextWeekMemos[idx];
       });
     }
     if (data.todos) {
@@ -844,7 +859,7 @@
 
   function clearPlannerUI() {
     document.querySelectorAll('.weekly-memo').forEach(i => i.value = '');
-    document.querySelectorAll('.mustdo-memo').forEach(i => i.value = '');
+    document.querySelectorAll('.nextweek-memo').forEach(i => i.value = '');
     document.querySelectorAll('.slot-cell').forEach(s => s.style.backgroundColor = '');
     document.querySelectorAll('.todo-item input[type="text"]').forEach(i => i.value = '');
     document.querySelectorAll('.todo-item input[type="checkbox"]').forEach(c => c.checked = false);
@@ -867,7 +882,7 @@
   }
 
   async function prepareNextWeek() {
-    if (!confirm('현재 주차 내용을 기출 보관함에 자동으로 백업하고, 체크되지 않은 미완료 할 일을 이월하여 새 주차 계획표로 리셋하시겠습니까?')) return;
+    if (!confirm('현재 주차 내용을 기출 보관함에 백업하고, 미완료 할 일은 이월하며, NEXT WEEK 메모는 새 주의 WEEKLY GOALS로 옮겨 새 주차 계획표로 리셋하시겠습니까?')) return;
 
     try {
       const dayNames = ['월', '화', '수', '목', '금', '토', '일'];
@@ -881,6 +896,9 @@
           }
         });
       });
+
+      // NEXT WEEK 메모를 새 주의 목표로 사용
+      const nextMemos = Array.from(document.querySelectorAll('.nextweek-memo')).map(i => i.value);
 
       // 1) 기출 보관함에 백업
       clearTimeout(saveTimer);
@@ -910,8 +928,8 @@
         ownerName: window.currentTab === 'sangmin' ? '상민' : '소이',
         weekKey: weekKey,
         dateRange: rangeStr,
-        weeklyMemos: ['', '', '', '', '', ''],
-        mustDoMemos: ['', '', '', '', '', ''],
+        weeklyMemos: nextMemos,
+        nextWeekMemos: ['', '', '', '', '', ''],
         todos: emptyTodos,
         slots: {},
         totalSlots: 0,
@@ -927,6 +945,7 @@
 
       await window.db.collection('planners').doc(docId).set(newPayload);
       window.plannerLoaded = true;
+      renderPlannerData(newPayload);
       renderCarryOverUI(parseCarried(uncompletedTodos));
       alert('성공적으로 기출 보관함에 백업되었으며, 새 주차 플래너로 초기화되었습니다!');
     } catch(e) {
@@ -947,7 +966,7 @@
       let docsData = [];
       querySnapshot.forEach((doc) => {
         const item = doc.data();
-        if (item && item.isArchived) docsData.push(item);
+        if (item && item.isArchived) docsData.push({ ...item, id: doc.id });
       });
 
       docsData.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
@@ -955,8 +974,10 @@
         docsData = docsData.filter(item => item.owner === window.archiveFilter);
       }
 
+      window.archiveDocsCache = docsData;
+
       if (docsData.length === 0) {
-        archiveContainer.innerHTML = `<div style="text-align:center; padding: 50px; color: #94a3b8; font-weight: 600;">저장된 플래너 기록이 없습니다.<br>'다음 주 준비'를 누르거나 자동 백업을 이용해보세요!</div>`;
+        archiveContainer.innerHTML = `<div style="text-align:center; padding: 50px; color: #94a3b8; font-weight: 600;">저장된 플래너 기록이 없습니다.<br>'Here We go~!'를 누르면 이번 주 기록이 이곳에 보관돼요!</div>`;
         return;
       }
 
@@ -983,13 +1004,15 @@
                 <div class="stat-value" style="color: #22c55e;">${rate}%</div>
               </div>
             </div>
-            <div class="archive-footer"><span>상세 기록 보기 ➔</span></div>
+            <div class="archive-footer">
+              <button class="archive-delete-btn" onclick="event.stopPropagation(); deleteArchive('${item.id}')">🗑 삭제</button>
+              <span>상세 기록 보기 ➔</span>
+            </div>
           </div>
         `;
       });
 
       archiveContainer.innerHTML = html;
-      window.archiveDocsCache = docsData;
     } catch(e) { console.error(e); }
   }
 
@@ -1026,6 +1049,11 @@
         if (m && m.trim()) memoHtml += `<li style="color:#e11d48;"><b>[Must-Do ${idx + 1}]</b> ${m}</li>`;
       });
     }
+    if (item.nextWeekMemos) {
+      item.nextWeekMemos.forEach((m, idx) => {
+        if (m && m.trim()) memoHtml += `<li style="color:#15803d;"><b>[Next ${idx + 1}]</b> ${m}</li>`;
+      });
+    }
     document.getElementById('modalMemos').innerHTML = memoHtml || '<li style="color:#94a3b8;">작성된 목표가 없습니다.</li>';
 
     let todoListHtml = '';
@@ -1048,7 +1076,21 @@
       });
     }
     document.getElementById('modalTodoList').innerHTML = todoListHtml || '<div style="color:#94a3b8; padding:10px;">기록된 할 일이 없습니다.</div>';
+    document.getElementById('modalDeleteBtn').onclick = () => deleteArchive(item.id);
     document.getElementById('detailModal').style.display = 'flex';
+  }
+
+  async function deleteArchive(docId) {
+    if (!docId || docId.endsWith('_current')) return;
+    if (!confirm('이 기록을 삭제할까요? 삭제하면 복구할 수 없습니다.')) return;
+    try {
+      await window.db.collection('planners').doc(docId).delete();
+      closeArchiveDetail();
+      loadArchiveList();
+    } catch(e) {
+      console.error(e);
+      alert('삭제 중 오류가 발생했습니다: ' + e.message);
+    }
   }
 
   function closeArchiveDetail() { document.getElementById('detailModal').style.display = 'none'; }
@@ -1292,6 +1334,7 @@
   }
 
   window.addEventListener('firebase-ready', () => {
+    updateDateHeaders();
     initProgressTables();
     initCalendarSync();
     loadPlannerData();
