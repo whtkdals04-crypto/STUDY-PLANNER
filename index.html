@@ -138,6 +138,10 @@
 
     tbody#gridBody tr { border-bottom: 1px solid var(--border-light); }
 
+    /* 하루 공부시간 합계 행 */
+    .total-row td { background: #f1f5f9; font-weight: 800; border-top: 2px solid var(--border); font-size: 11px; padding: 6px 2px; color: #3b82f6; line-height: 1.3; }
+    .total-row td.time-col { color: var(--text); }
+
     .progress-container { padding: 20px; background: #ffffff; overflow-x: auto; }
     .progress-title-badge { display: inline-block; padding: 4px 16px; border-radius: 20px; color: white; font-weight: 900; font-size: 14px; margin-bottom: 12px; }
     .progress-title-badge.sangmin { background: #6366f1; }
@@ -152,6 +156,12 @@
     .progress-cell:hover { background: #f1f5f9; }
     .progress-cell.marked-sangmin { background: #e0e7ff; color: #3730a3; }
     .progress-cell.marked-soi { background: #fef3c7; color: #92400e; }
+
+    /* 진도율 칸 */
+    .rate-cell { background: #f1f5f9; font-weight: 800; color: #334155; }
+    .rate-cell.all-rate { background: #e0e7ff; color: #3730a3; }
+    .rate-row td { border-top: 2px solid var(--border); }
+    .progress-table th.rate-head { background: #e2e8f0; width: 70px; }
 
     .progress-footer { margin-top: 12px; font-size: 11px; color: #64748b; font-weight: 600; text-align: right; }
 
@@ -397,6 +407,22 @@
           }
         </script>
       </tbody>
+      <tfoot>
+        <tr class="total-row">
+          <td class="time-col">합계</td>
+          <td class="day-total" data-d="0">0분</td>
+          <td class="day-total" data-d="1">0분</td>
+          <td class="day-total" data-d="2">0분</td>
+          <td class="day-total" data-d="3">0분</td>
+          <td class="day-total" data-d="4">0분</td>
+          <td class="day-total" data-d="5">0분</td>
+          <td class="day-total" data-d="6">0분</td>
+        </tr>
+        <tr class="total-row">
+          <td class="time-col">주간</td>
+          <td colspan="7" id="weekTotal">0시간 0분</td>
+        </tr>
+      </tfoot>
     </table>
   </div>
 
@@ -406,12 +432,12 @@
       <thead>
         <tr>
           <th class="unit-col">단원</th>
-          <th>정리</th><th>쎄다</th><th>혼합형</th><th>심화별</th><th>Half</th><th>단원별</th>
+          <th>정리</th><th>쎄다</th><th>혼합형</th><th>심화별</th><th>Half</th><th>단원별</th><th class="rate-head">진도율</th>
         </tr>
       </thead>
       <tbody id="progressSangminBody"></tbody>
     </table>
-    <div class="progress-footer">칸을 누를 때마다 회독 수가 증가합니다.</div>
+    <div class="progress-footer">칸을 누를 때마다 회독 수가 증가합니다. (正 = 5회독 = 100%)</div>
   </div>
 
   <div id="progressSoiView" class="progress-container" style="display: none;">
@@ -420,12 +446,12 @@
       <thead>
         <tr>
           <th class="unit-col">단원</th>
-          <th>유형별</th><th>유형별+</th><th>쎄다</th><th>혼합형</th><th>단원별</th><th>심화별</th><th>HALF</th><th>파트별 다지기</th>
+          <th>유형별</th><th>유형별+</th><th>쎄다</th><th>혼합형</th><th>단원별</th><th>심화별</th><th>HALF</th><th>파트별 다지기</th><th class="rate-head">진도율</th>
         </tr>
       </thead>
       <tbody id="progressSoiBody"></tbody>
     </table>
-    <div class="progress-footer">칸을 누를 때마다 회독 수가 증가합니다.</div>
+    <div class="progress-footer">칸을 누를 때마다 회독 수가 증가합니다. (正 = 5회독 = 100%)</div>
   </div>
 
   <div id="archiveView" class="archive-container" style="display: none;">
@@ -635,31 +661,80 @@
     return [];
   }
 
+  // ───────── 하루 공부시간 합계 (1칸 = 10분) ─────────
+  function updateDayTotals() {
+    const counts = [0, 0, 0, 0, 0, 0, 0];
+    document.querySelectorAll('.slot-cell').forEach(s => {
+      const bg = s.style.backgroundColor;
+      if (bg && bg !== 'transparent' && bg !== 'rgb(255, 255, 255)' && bg !== '#ffffff') {
+        const d = parseInt(s.dataset.dayCol, 10);
+        if (!isNaN(d)) counts[d]++;
+      }
+    });
+    const fmt = n => {
+      const m = n * 10, h = Math.floor(m / 60);
+      return h ? `${h}시간<br>${m % 60}분` : `${m}분`;
+    };
+    document.querySelectorAll('.day-total').forEach(td => {
+      td.innerHTML = fmt(counts[parseInt(td.dataset.d, 10)]);
+    });
+    const all = counts.reduce((a, b) => a + b, 0) * 10;
+    const w = document.getElementById('weekTotal');
+    if (w) w.textContent = `${Math.floor(all / 60)}시간 ${all % 60}분`;
+  }
+
+  // ───────── 진도표 (진도율 포함) ─────────
+  function buildProgressBody(user, cols) {
+    let html = '';
+    UNITS.forEach((unit, u) => {
+      html += `<tr><td class="unit-name">${unit}</td>`;
+      cols.forEach((_, c) => {
+        html += `<td class="progress-cell" data-user="${user}" data-unit="${u}" data-col="${c}" onclick="toggleProgressCell(this)"></td>`;
+      });
+      html += `<td class="rate-cell row-rate" data-user="${user}" data-unit="${u}">0%</td></tr>`;
+    });
+    html += `<tr class="rate-row"><td class="unit-name">진도율</td>`;
+    cols.forEach((_, c) => {
+      html += `<td class="rate-cell col-rate" data-user="${user}" data-col="${c}">0%</td>`;
+    });
+    html += `<td class="rate-cell all-rate" data-user="${user}">0%</td></tr>`;
+    return html;
+  }
+
   function initProgressTables() {
-    const sangminBody = document.getElementById('progressSangminBody');
-    let sangminHtml = '';
-    UNITS.forEach((unit, uIdx) => {
-      sangminHtml += `<tr><td class="unit-name">${unit}</td>`;
-      SANGMIN_COLS.forEach((col, cIdx) => {
-        sangminHtml += `<td class="progress-cell" data-user="sangmin" data-unit="${uIdx}" data-col="${cIdx}" onclick="toggleProgressCell(this)"></td>`;
-      });
-      sangminHtml += `</tr>`;
-    });
-    sangminBody.innerHTML = sangminHtml;
-
-    const soiBody = document.getElementById('progressSoiBody');
-    let soiHtml = '';
-    UNITS.forEach((unit, uIdx) => {
-      soiHtml += `<tr><td class="unit-name">${unit}</td>`;
-      SOI_COLS.forEach((col, cIdx) => {
-        soiHtml += `<td class="progress-cell" data-user="soi" data-unit="${uIdx}" data-col="${cIdx}" onclick="toggleProgressCell(this)"></td>`;
-      });
-      soiHtml += `</tr>`;
-    });
-    soiBody.innerHTML = soiHtml;
-
+    document.getElementById('progressSangminBody').innerHTML = buildProgressBody('sangmin', SANGMIN_COLS);
+    document.getElementById('progressSoiBody').innerHTML = buildProgressBody('soi', SOI_COLS);
     loadProgressData('sangmin');
     loadProgressData('soi');
+  }
+
+  // 진도율 = 회독 수 ÷ 최대 회독 수 (正 = 5회독, 상민 '정리' 열은 ✓ 1번 = 100%)
+  function updateProgressRates(user) {
+    const nCols = user === 'sangmin' ? SANGMIN_COLS.length : SOI_COLS.length;
+    const maxOf = c => (user === 'sangmin' && c === 0) ? 1 : 5;
+    const rowSum = Array(UNITS.length).fill(0);
+    const colSum = Array(nCols).fill(0);
+
+    document.querySelectorAll(`.progress-cell[data-user="${user}"]`).forEach(td => {
+      const n = parseInt(td.dataset.count || '0', 10) || 0;
+      rowSum[parseInt(td.dataset.unit, 10)] += n;
+      colSum[parseInt(td.dataset.col, 10)] += n;
+    });
+
+    let rowMax = 0;
+    for (let c = 0; c < nCols; c++) rowMax += maxOf(c);
+    const pct = (s, m) => Math.round((s / m) * 100) + '%';
+
+    document.querySelectorAll(`.row-rate[data-user="${user}"]`).forEach(td => {
+      td.textContent = pct(rowSum[parseInt(td.dataset.unit, 10)], rowMax);
+    });
+    document.querySelectorAll(`.col-rate[data-user="${user}"]`).forEach(td => {
+      const c = parseInt(td.dataset.col, 10);
+      td.textContent = pct(colSum[c], UNITS.length * maxOf(c));
+    });
+    const all = rowSum.reduce((a, b) => a + b, 0);
+    const allCell = document.querySelector(`.all-rate[data-user="${user}"]`);
+    if (allCell) allCell.textContent = pct(all, rowMax * UNITS.length);
   }
 
   async function toggleProgressCell(td) {
@@ -675,6 +750,7 @@
 
     td.dataset.count = count;
     renderProgressCellText(td);
+    updateProgressRates(user);
     await saveProgressData(user);
   }
 
@@ -724,6 +800,7 @@
             renderProgressCellText(cell);
           }
         });
+        updateProgressRates(user);
       }
     } catch(e) { console.error(e); }
   }
@@ -908,6 +985,7 @@
         if (slot) slot.style.backgroundColor = data.slots[id];
       });
     }
+    updateDayTotals();
   }
 
   function clearPlannerUI() {
@@ -917,6 +995,7 @@
     document.querySelectorAll('.todo-item input[type="text"]').forEach(i => i.value = '');
     document.querySelectorAll('.todo-item input[type="checkbox"]').forEach(c => c.checked = false);
     document.getElementById('carryOverContainer').style.display = 'none';
+    updateDayTotals();
   }
 
   function renderCarryOverUI(carriedItems) {
@@ -1414,6 +1493,7 @@
       }
     }
     td.style.backgroundColor = window.currentColor;
+    updateDayTotals();
     onDataChanged();
   }
 
