@@ -184,32 +184,48 @@
     .modal-delete-btn { width: 100%; margin-top: 16px; padding: 10px; background: #fff; color: #ef4444; border: 1.5px solid #fecaca; border-radius: 8px; font-weight: 800; cursor: pointer; }
 
     .calendar-container { padding: 20px; background: #ffffff; }
-    .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+    .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px; }
     .calendar-month-title { font-size: 20px; font-weight: 900; color: #0f172a; display: flex; align-items: center; gap: 8px; }
     .add-exam-btn { background: #059669; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 800; font-size: 12px; cursor: pointer; }
+
+    .cal-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-bottom: 12px; font-size: 11px; font-weight: 700; color: #475569; }
+    .legend-item { display: flex; align-items: center; gap: 4px; }
+    .legend-dot { width: 12px; height: 12px; border-radius: 3px; border-left: 3px solid; }
+    .legend-dot.exam { background: #fee2e2; border-color: #ef4444; }
+    .legend-dot.apply { background: #dbeafe; border-color: #2563eb; }
+    .legend-dot.announce { background: #dcfce7; border-color: #16a34a; }
+    .legend-dot.register { background: #ffedd5; border-color: #ea580c; }
 
     .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); border-top: 2px solid var(--border); border-left: 1px solid var(--border-light); }
     .calendar-day-head { background: #f1f5f9; padding: 8px; text-align: center; font-weight: 800; font-size: 11px; border-right: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light); }
     .calendar-day-head.sun { color: #ef4444; }
     .calendar-day-head.sat { color: #3b82f6; }
-    .calendar-cell { min-height: 90px; padding: 4px; border-right: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light); background: #ffffff; cursor: pointer; position: relative; }
+    .calendar-cell { min-height: 90px; padding: 4px; border-right: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light); background: #ffffff; cursor: pointer; position: relative; min-width: 0; }
     .calendar-cell.other-month { background: #f8fafc; opacity: 0.5; }
     .calendar-cell.today { background: #f0fdf4; }
     .cell-date { font-weight: 800; font-size: 11px; color: #334155; margin-bottom: 4px; }
     .cell-date.sun { color: #ef4444; }
     .cell-date.sat { color: #3b82f6; }
 
-    .exam-badge { background: #fee2e2; border-left: 3px solid #ef4444; color: #991b1b; padding: 2px 4px; border-radius: 3px; font-size: 10px; font-weight: 800; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .exam-badge.quiz { background: #fef3c7; border-left-color: #f59e0b; color: #92400e; }
-    .exam-badge.assignment { background: #e0e7ff; border-left-color: #6366f1; color: #3730a3; }
+    .exam-badge { background: #fee2e2; border-left: 3px solid #ef4444; color: #991b1b; padding: 2px 4px; border-radius: 3px; font-size: 10px; font-weight: 800; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-height: 16px; }
+    .exam-badge.apply { background: #dbeafe; border-left-color: #2563eb; color: #1e40af; }
+    .exam-badge.announce { background: #dcfce7; border-left-color: #16a34a; color: #166534; }
+    .exam-badge.register { background: #ffedd5; border-left-color: #ea580c; color: #9a3412; }
+    /* 기간 일정: 칸을 가로로 이어 붙여 하나의 막대처럼 보이게 */
+    .exam-badge.range-start { margin-right: -5px; border-radius: 3px 0 0 3px; }
+    .exam-badge.range-mid { margin-left: -5px; margin-right: -5px; border-left: none; border-radius: 0; }
+    .exam-badge.range-end { margin-left: -5px; border-left: none; border-radius: 0 3px 3px 0; }
 
     .exam-list-section { margin-top: 24px; border-top: 2px solid #e2e8f0; padding-top: 16px; }
     .exam-list-title { font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 12px; }
     .exam-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
     .exam-card { background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 12px; position: relative; }
-    .exam-card-title { font-weight: 800; font-size: 13px; color: #0f172a; }
+    .exam-card-title { font-weight: 800; font-size: 13px; color: #0f172a; padding-right: 70px; }
     .exam-card-date { font-size: 11px; color: #64748b; font-weight: 700; margin-top: 4px; }
     .exam-dday { position: absolute; top: 12px; right: 12px; background: #ef4444; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 900; }
+    .exam-dday.apply { background: #2563eb; }
+    .exam-dday.announce { background: #16a34a; }
+    .exam-dday.register { background: #ea580c; }
     .exam-dday.passed { background: #94a3b8; }
 
     .modal-overlay {
@@ -428,7 +444,14 @@
         <button onclick="moveCalendarMonth(1)" style="background:none; border:none; cursor:pointer; font-size:18px;">▶</button>
         <button onclick="goTodayCalendar()" style="font-size:11px; padding:3px 8px; border-radius:4px; border:1px solid #cbd5e1; background:#f8fafc; cursor:pointer; margin-left:8px;">오늘</button>
       </div>
-      <button class="add-exam-btn" onclick="openExamModal()">+ 시험 일정 추가</button>
+      <button class="add-exam-btn" onclick="openExamModal()">+ 일정 추가</button>
+    </div>
+
+    <div class="cal-legend">
+      <div class="legend-item"><span class="legend-dot exam"></span>시험</div>
+      <div class="legend-item"><span class="legend-dot apply"></span>원서 접수</div>
+      <div class="legend-item"><span class="legend-dot announce"></span>합격자 발표</div>
+      <div class="legend-item"><span class="legend-dot register"></span>등록 기간</div>
     </div>
 
     <div class="calendar-grid">
@@ -443,7 +466,7 @@
     <div id="calendarDaysGrid" class="calendar-grid"></div>
 
     <div class="exam-list-section">
-      <div class="exam-list-title">📌 다가오는 학교 시험 & 일정 D-Day</div>
+      <div class="exam-list-title">📌 다가오는 시험 & 일정 D-Day</div>
       <div id="examCardGrid" class="exam-card-grid"></div>
     </div>
   </div>
@@ -452,24 +475,29 @@
 <div id="examModal" class="modal-overlay">
   <div class="modal-content">
     <div class="modal-header">
-      <div class="modal-title">학교 시험 / 일정 추가</div>
+      <div class="modal-title">시험 / 일정 추가</div>
       <button class="close-btn" onclick="closeExamModal()">✕</button>
     </div>
     <div class="form-group">
       <label>구분</label>
       <select id="examTypeInput">
-        <option value="exam">학교 중간/기말고사</option>
-        <option value="quiz">퀴즈 / 단원평가</option>
-        <option value="assignment">과제 / 프로젝트</option>
+        <option value="exam">시험 (편입/학교)</option>
+        <option value="apply">원서 접수 기간</option>
+        <option value="announce">합격자 발표</option>
+        <option value="register">등록 기간</option>
       </select>
     </div>
     <div class="form-group">
-      <label>과목 / 시험명</label>
-      <input type="text" id="examTitleInput" placeholder="예: 대학수학1 중간고사">
+      <label>과목 / 일정명</label>
+      <input type="text" id="examTitleInput" placeholder="예: ○○대 편입 원서 접수">
     </div>
     <div class="form-group">
-      <label>날짜</label>
+      <label>시작일</label>
       <input type="date" id="examDateInput">
+    </div>
+    <div class="form-group">
+      <label>종료일 (기간일 때만 입력, 비우면 하루)</label>
+      <input type="date" id="examEndDateInput">
     </div>
     <div class="form-group">
       <label>메모 (시험 범위, 강의실 등)</label>
@@ -516,6 +544,31 @@
   const SOI_COLS = ['유형별', '유형별+', '쎄다', '혼합형', '단원별', '심화별', 'HALF', '파트별 다지기'];
   const SOI_MARKS = ['', '—', '⊤', '下', '止', '正'];
   const SANGMIN_MARKS = ['', '|', '||', '|||', '||||', '正'];
+
+  // 캘린더 일정 종류
+  const EVENT_TYPE_LABELS = {
+    exam: '시험',
+    apply: '원서접수',
+    announce: '합격자 발표',
+    register: '등록'
+  };
+  // 마감일 기준으로 D-Day를 보여줄 종류
+  const DEADLINE_TYPES = ['apply', 'register'];
+
+  function getEventType(t) {
+    return EVENT_TYPE_LABELS[t] ? t : 'exam';
+  }
+
+  function toLocalDate(s) {
+    const [y, m, d] = String(s).split('-').map(Number);
+    return new Date(y, (m || 1) - 1, d || 1);
+  }
+
+  function escapeHtml(str) {
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
 
   function getCurrentWeekKeyAndRange() {
     const d = new Date();
@@ -1139,10 +1192,19 @@
       cell.onclick = () => openExamModal(dateStr);
 
       let cellHtml = `<div class="cell-date ${dateClass}">${d}</div>`;
-      const dayEvents = events.filter(e => e.date === dateStr);
+
+      // 시작일~종료일 범위에 오늘 칸이 포함되는 일정 (endDate 없으면 하루짜리)
+      const dayEvents = events.filter(e => e.date <= dateStr && dateStr <= (e.endDate || e.date));
       dayEvents.forEach(e => {
-        let badgeClass = e.type === 'quiz' ? 'quiz' : (e.type === 'assignment' ? 'assignment' : '');
-        cellHtml += `<div class="exam-badge ${badgeClass}" title="${e.title}">${e.title}</div>`;
+        const endStr = e.endDate || e.date;
+        const isRange = endStr !== e.date;
+        const cls = getEventType(e.type);
+        let pos = '';
+        if (isRange) pos = dateStr === e.date ? 'range-start' : (dateStr === endStr ? 'range-end' : 'range-mid');
+        // 제목은 시작일, 매주 일요일, 매월 1일 칸에만 표시
+        const showTitle = !isRange || dateStr === e.date || dayOfWeek === 0 || d === 1;
+        const safeTitle = escapeHtml(e.title);
+        cellHtml += `<div class="exam-badge ${cls} ${pos}" title="${safeTitle}">${showTitle ? safeTitle : '&nbsp;'}</div>`;
       });
 
       cell.innerHTML = cellHtml;
@@ -1174,6 +1236,7 @@
   }
 
   function moveCalendarMonth(delta) {
+    window.calendarDate.setDate(1);
     window.calendarDate.setMonth(window.calendarDate.getMonth() + delta);
     renderCalendar();
   }
@@ -1187,6 +1250,7 @@
     const today = new Date();
     const dateStr = (typeof selectedDate === 'string' && selectedDate) ? selectedDate : `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     document.getElementById('examDateInput').value = dateStr;
+    document.getElementById('examEndDateInput').value = '';
     document.getElementById('examModal').style.display = 'flex';
   }
 
@@ -1194,21 +1258,27 @@
     document.getElementById('examModal').style.display = 'none';
     document.getElementById('examTitleInput').value = '';
     document.getElementById('examMemoInput').value = '';
+    document.getElementById('examEndDateInput').value = '';
   }
 
   async function saveExamEvent() {
     const title = document.getElementById('examTitleInput').value.trim();
     const date = document.getElementById('examDateInput').value;
+    const endDate = document.getElementById('examEndDateInput').value || date;
     const type = document.getElementById('examTypeInput').value;
     const memo = document.getElementById('examMemoInput').value.trim();
 
     if (!title || !date) {
-      alert('과목명/시험명과 날짜를 입력해주세요.');
+      alert('일정명과 시작일을 입력해주세요.');
+      return;
+    }
+    if (endDate < date) {
+      alert('종료일이 시작일보다 빠릅니다.');
       return;
     }
 
     const events = (window.calendarEventsCache || []).slice();
-    events.push({ id: 'exam_' + Date.now(), type, title, date, memo });
+    events.push({ id: 'exam_' + Date.now(), type, title, date, endDate, memo });
 
     try {
       await window.db.collection('settings').doc('calendar_exams').set({ events });
@@ -1228,30 +1298,44 @@
     const container = document.getElementById('examCardGrid');
 
     if (events.length === 0) {
-      container.innerHTML = `<div style="grid-column: 1 / -1; color:#94a3b8; font-size:12px; font-weight:600;">등록된 시험 및 학교 일정이 없습니다.</div>`;
+      container.innerHTML = `<div style="grid-column: 1 / -1; color:#94a3b8; font-size:12px; font-weight:600;">등록된 시험 및 일정이 없습니다.</div>`;
       return;
     }
 
     events.sort((a,b) => a.date.localeCompare(b.date));
     const today = new Date();
     today.setHours(0,0,0,0);
+    const DAY = 86400000;
 
     let html = '';
     events.forEach(e => {
-      const eDate = new Date(e.date);
-      eDate.setHours(0,0,0,0);
-      const diffDays = Math.ceil((eDate - today) / (1000 * 60 * 60 * 24));
+      const type = getEventType(e.type);
+      const endStr = e.endDate || e.date;
+      const diffStart = Math.round((toLocalDate(e.date) - today) / DAY);
+      const diffEnd = Math.round((toLocalDate(endStr) - today) / DAY);
+      const isDeadline = DEADLINE_TYPES.includes(type);
+      const isRange = endStr !== e.date;
 
-      let ddayText = diffDays === 0 ? 'D-DAY' : (diffDays > 0 ? `D-${diffDays}` : `D+${Math.abs(diffDays)}`);
-      let isPassed = diffDays < 0;
-      let typeName = e.type === 'quiz' ? '퀴즈' : (e.type === 'assignment' ? '과제' : '시험');
+      let ddayText;
+      let isPassed = false;
+      if (diffStart > 0) {
+        ddayText = `D-${diffStart}`;
+      } else if (diffEnd >= 0) {
+        if (isDeadline) ddayText = diffEnd === 0 ? '마감 D-DAY' : `마감 D-${diffEnd}`;
+        else ddayText = diffEnd === 0 && !isRange ? 'D-DAY' : (diffEnd === 0 ? '마지막 날' : '진행중');
+      } else {
+        ddayText = `D+${Math.abs(diffEnd)}`;
+        isPassed = true;
+      }
+
+      const dateText = isRange ? `${e.date} ~ ${endStr}` : e.date;
 
       html += `
         <div class="exam-card">
-          <div class="exam-dday ${isPassed ? 'passed' : ''}">${ddayText}</div>
-          <div class="exam-card-title">[${typeName}] ${e.title}</div>
-          <div class="exam-card-date">📅 ${e.date}</div>
-          ${e.memo ? `<div style="font-size:11px; color:#475569; margin-top:6px; background:#fff; padding:6px; border-radius:4px; border:1px solid #cbd5e1;">${e.memo}</div>` : ''}
+          <div class="exam-dday ${isPassed ? 'passed' : type}">${ddayText}</div>
+          <div class="exam-card-title">[${EVENT_TYPE_LABELS[type]}] ${escapeHtml(e.title)}</div>
+          <div class="exam-card-date">📅 ${dateText}</div>
+          ${e.memo ? `<div style="font-size:11px; color:#475569; margin-top:6px; background:#fff; padding:6px; border-radius:4px; border:1px solid #cbd5e1;">${escapeHtml(e.memo)}</div>` : ''}
           <button onclick="deleteExamEvent('${e.id}')" style="margin-top:8px; background:none; border:none; color:#ef4444; font-size:10px; font-weight:700; cursor:pointer; padding:0;">삭제</button>
         </div>
       `;
