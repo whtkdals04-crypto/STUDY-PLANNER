@@ -268,6 +268,34 @@
     .exam-dday.register { background: #ea580c; }
     .exam-dday.passed { background: #94a3b8; }
 
+    /* ───────── 인강 계정 시간표 ───────── */
+    .tab-button.lecture.active { color: #0ea5e9; }
+    .lecture-container { padding: 14px 12px; background: #ffffff; }
+    .lec-top { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 10px; }
+    .lec-group { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: #475569; flex-wrap: wrap; }
+    .lec-btn { padding: 6px 12px; font-size: 12px; font-weight: 800; border-radius: 16px; border: 1.5px solid var(--border-light); background: #fff; cursor: pointer; color: #334155; font-family: inherit; }
+    .lec-btn.active.sangmin { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+    .lec-btn.active.soi { background: #ec4899; border-color: #ec4899; color: #fff; }
+    .lec-btn.active.mode { background: #0f172a; border-color: #0f172a; color: #fff; }
+    .lec-btn.danger { color: #ef4444; border-color: #fecaca; }
+    .lec-btn.use-start { background: #0ea5e9; border-color: #0ea5e9; color: #fff; }
+    .lec-status { padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 800; margin-bottom: 8px; border: 1.5px solid; }
+    .lec-status.free { background: #f1f5f9; border-color: #cbd5e1; color: #475569; }
+    .lec-status.busy { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+    .lec-status.mine { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+    .lec-status.reserved { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+    .lec-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 8px 0; font-size: 11px; font-weight: 700; color: #475569; }
+    .lec-legend span { display: inline-flex; align-items: center; gap: 4px; }
+    .lec-sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+    .lec-table { border: 1px solid var(--border-light); }
+    .lec-cell { flex: 1; height: 16px; cursor: pointer; touch-action: none; border-right: 1px dashed var(--border-dashed); }
+    .lec-cell:nth-child(3n) { border-right: 1px solid var(--border-light); }
+    .lec-cell:last-child { border-right: none; }
+    .lec-overlap { margin-top: 12px; background: #fef2f2; border: 1.5px solid #fecaca; color: #991b1b; border-radius: 8px; padding: 10px 12px; font-size: 12px; font-weight: 700; line-height: 1.6; }
+    .lec-ok { margin-top: 12px; background: #f0fdf4; border: 1.5px solid #bbf7d0; color: #166534; border-radius: 8px; padding: 10px 12px; font-size: 12px; font-weight: 700; }
+    .lec-totals { margin-top: 8px; font-size: 11px; font-weight: 700; color: #64748b; }
+    .lec-note { margin-top: 6px; font-size: 11px; color: #94a3b8; font-weight: 600; }
+
     .modal-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(15, 23, 42, 0.6); display: none; align-items: center; justify-content: center;
@@ -324,6 +352,9 @@
   </div>
   <div id="tab-soi" class="tab-button soi" onclick="switchTab('soi')">
     <span>📙</span> PLANNER (소이)
+  </div>
+  <div id="tab-lecture" class="tab-button lecture" onclick="switchTab('lecture')">
+    <span>🎧</span> 인강 시간표
   </div>
   <div id="tab-progress-sangmin" class="tab-button progress-sangmin" onclick="switchTab('progress-sangmin')">
     <span>📊</span> 진도표 (상민)
@@ -559,6 +590,49 @@
       <div class="exam-list-title">📌 다가오는 시험 & 일정 D-Day</div>
       <div id="examCardGrid" class="exam-card-grid"></div>
     </div>
+  </div>
+
+  <div id="lectureView" class="lecture-container" style="display: none;">
+    <div class="lec-top">
+      <div class="lec-group">
+        <span>나는</span>
+        <button id="lec-me-sangmin" class="lec-btn sangmin" onclick="setLecMe('sangmin')">상민</button>
+        <button id="lec-me-soi" class="lec-btn soi" onclick="setLecMe('soi')">소이</button>
+      </div>
+      <div class="lec-group">
+        <button id="lec-mode-paint" class="lec-btn mode active" onclick="setLecMode('paint')">🖌 칠하기</button>
+        <button id="lec-mode-erase" class="lec-btn mode" onclick="setLecMode('erase')">🧹 지우기</button>
+        <button class="lec-btn danger" onclick="clearMyLecture()">내 시간 전부 지우기</button>
+      </div>
+    </div>
+
+    <div id="lecStatus" class="lec-status free">불러오는 중...</div>
+    <div class="lec-top" style="margin-bottom:0;">
+      <div class="lec-group">
+        <button class="lec-btn use-start" onclick="startLectureUse()">▶ 지금 인강 쓰기 시작</button>
+        <button class="lec-btn" onclick="endLectureUse()">■ 사용 끝</button>
+      </div>
+    </div>
+
+    <div class="lec-legend">
+      <span><i class="lec-sw" style="background:#93c5fd;"></i>상민</span>
+      <span><i class="lec-sw" style="background:#f9a8d4;"></i>소이</span>
+      <span><i class="lec-sw" style="background:#ef4444;"></i>겹침</span>
+    </div>
+
+    <table class="table lec-table">
+      <thead>
+        <tr>
+          <th class="time-col">TIME</th>
+          <th>MON</th><th>TUE</th><th>WED</th><th>THU</th><th>FRI</th><th>SAT</th><th>SUN</th>
+        </tr>
+      </thead>
+      <tbody id="lecGridBody"></tbody>
+    </table>
+
+    <div id="lecOverlap"></div>
+    <div id="lecTotals" class="lec-totals"></div>
+    <div class="lec-note">매주 반복되는 시간표예요. 1칸 = 10분. 칠한 시간은 상대 화면에도 바로 보여요.</div>
   </div>
 </div>
 
@@ -978,7 +1052,7 @@
   }
 
   async function savePlannerData(isExplicitSave = false) {
-    if (['archive', 'progress-sangmin', 'progress-soi', 'calendar'].includes(window.currentTab) || !window.db) return;
+    if (['archive', 'progress-sangmin', 'progress-soi', 'calendar', 'lecture'].includes(window.currentTab) || !window.db) return;
     if (!window.plannerLoaded && !isExplicitSave) return;
 
     const { weekKey, rangeStr } = getCurrentWeekKeyAndRange();
@@ -1553,11 +1627,12 @@
 
   async function switchTab(tab) {
     await flushSave();
+    if (lecSaveTimer) { clearTimeout(lecSaveTimer); await lecSaveNow(); }
     window.currentTab = tab;
     document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
     document.getElementById(`tab-${tab}`).classList.add('active');
 
-    const views = ['plannerView', 'progressSangminView', 'progressSoiView', 'archiveView', 'calendarView'];
+    const views = ['plannerView', 'progressSangminView', 'progressSoiView', 'archiveView', 'calendarView', 'lectureView'];
     views.forEach(v => document.getElementById(v).style.display = 'none');
 
     const ownerBadge = document.getElementById('plannerOwnerBadge');
@@ -1572,6 +1647,10 @@
     } else if (tab === 'calendar') {
       document.getElementById('calendarView').style.display = 'block';
       renderCalendar();
+    } else if (tab === 'lecture') {
+      document.getElementById('lectureView').style.display = 'block';
+      lecUpdateControls();
+      lecRenderAll();
     } else {
       document.getElementById('plannerView').style.display = 'block';
       ownerBadge.innerText = tab === 'sangmin' ? 'PLANNER (상민)' : 'PLANNER (소이)';
@@ -1626,10 +1705,270 @@
     onDataChanged();
   }
 
+  // ───────── 인강 계정 시간표 (10분 단위, 매주 반복) ─────────
+  const LEC_COLORS = { sangmin: '#93c5fd', soi: '#f9a8d4', both: '#ef4444' };
+  const LEC_NAMES = { sangmin: '상민', soi: '소이' };
+  const LEC_SUBJ = { sangmin: '상민이', soi: '소이가' };
+  const LEC_STALE_MS = 6 * 3600 * 1000;
+  const lec = { slots: { sangmin: new Set(), soi: new Set() }, nowUser: '', nowStart: '' };
+  let lecMe = 'sangmin';
+  try { lecMe = localStorage.getItem('lecMe') === 'soi' ? 'soi' : 'sangmin'; } catch (e) {}
+  let lecMode = 'paint';
+  let lecPainting = false;
+  let lecSaveTimer = null;
+  let unsubscribeLecture = null;
+
+  function lecDoc() { return window.db.collection('settings').doc('lecture_schedule'); }
+
+  function lecFmt(min) {
+    return String(Math.floor(min / 60)).padStart(2, '0') + ':' + String(min % 60).padStart(2, '0');
+  }
+
+  function lecIdToMin(id) {
+    const [d, h, m] = id.split('-').map(Number);
+    return { d, min: h * 60 + m * 10 };
+  }
+
+  function buildLectureGrid() {
+    let html = '';
+    for (let h = 6; h <= 24; h++) {
+      html += `<tr><td class="time-col">${String(h).padStart(2, '0')}:00</td>`;
+      for (let d = 0; d < 7; d++) {
+        html += '<td><div style="display:flex; height:100%;">';
+        for (let m = 0; m < 6; m++) html += `<div class="lec-cell" data-id="${d}-${h}-${m}"></div>`;
+        html += '</div></td>';
+      }
+      html += '</tr>';
+    }
+    const body = document.getElementById('lecGridBody');
+    body.innerHTML = html;
+
+    body.addEventListener('mousedown', (e) => {
+      const c = e.target.closest('.lec-cell');
+      if (c) { lecPainting = true; lecApply(c); }
+    });
+    body.addEventListener('mouseover', (e) => {
+      if (!lecPainting) return;
+      const c = e.target.closest('.lec-cell');
+      if (c) lecApply(c);
+    });
+    body.addEventListener('touchstart', (e) => {
+      const c = e.target.closest('.lec-cell');
+      if (c) { lecPainting = true; lecApply(c); }
+    }, { passive: true });
+    body.addEventListener('touchmove', (e) => {
+      if (!lecPainting) return;
+      const t = e.touches[0];
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      const c = el && el.closest ? el.closest('.lec-cell') : null;
+      if (c) lecApply(c);
+    }, { passive: true });
+
+    const endPaint = () => {
+      if (!lecPainting) return;
+      lecPainting = false;
+      lecScheduleSave();
+    };
+    window.addEventListener('mouseup', endPaint);
+    window.addEventListener('touchend', endPaint);
+    window.addEventListener('touchcancel', endPaint);
+  }
+
+  function lecCellColor(id) {
+    const a = lec.slots.sangmin.has(id), b = lec.slots.soi.has(id);
+    if (a && b) return LEC_COLORS.both;
+    if (a) return LEC_COLORS.sangmin;
+    if (b) return LEC_COLORS.soi;
+    return '';
+  }
+
+  function lecApply(cell) {
+    const id = cell.dataset.id;
+    const set = lec.slots[lecMe];
+    if (lecMode === 'paint') {
+      if (set.has(id)) return;
+      set.add(id);
+    } else {
+      if (!set.has(id)) return;
+      set.delete(id);
+    }
+    cell.style.backgroundColor = lecCellColor(id);
+    lecRenderSummary();
+  }
+
+  function lecOverlaps() {
+    const byDay = {};
+    lec.slots.sangmin.forEach(id => {
+      if (!lec.slots.soi.has(id)) return;
+      const { d, min } = lecIdToMin(id);
+      (byDay[d] = byDay[d] || []).push(min);
+    });
+    const out = [];
+    Object.keys(byDay).map(Number).sort((a, b) => a - b).forEach(d => {
+      const mins = byDay[d].sort((a, b) => a - b);
+      let start = mins[0], prev = mins[0];
+      for (let i = 1; i <= mins.length; i++) {
+        if (i < mins.length && mins[i] === prev + 10) { prev = mins[i]; continue; }
+        out.push(`${DAY_KO[d]}요일 ${lecFmt(start)} ~ ${lecFmt(prev + 10)}`);
+        if (i < mins.length) { start = mins[i]; prev = mins[i]; }
+      }
+    });
+    return out;
+  }
+
+  function lecTotalText(n) {
+    const m = n * 10;
+    return `${Math.floor(m / 60)}시간 ${m % 60}분`;
+  }
+
+  function lecRenderSummary() {
+    const ov = lecOverlaps();
+    const box = document.getElementById('lecOverlap');
+    box.innerHTML = ov.length
+      ? `<div class="lec-overlap">⚠ 겹치는 시간이 있어요. 한 명이 옮겨 주세요.<br>${ov.map(escapeHtml).join('<br>')}</div>`
+      : `<div class="lec-ok">겹치는 시간이 없어요 ✓</div>`;
+    document.getElementById('lecTotals').textContent =
+      `주간 예약 · 상민 ${lecTotalText(lec.slots.sangmin.size)} / 소이 ${lecTotalText(lec.slots.soi.size)}`;
+  }
+
+  function lecRenderStatus() {
+    const el = document.getElementById('lecStatus');
+    if (!el) return;
+    const now = new Date();
+    let using = lec.nowUser;
+    const start = lec.nowStart ? new Date(lec.nowStart) : null;
+    if (using && (!start || isNaN(start) || now - start > LEC_STALE_MS)) using = '';
+
+    if (using) {
+      const mins = Math.max(0, Math.round((now - start) / 60000));
+      const hhmm = lecFmt(start.getHours() * 60 + start.getMinutes());
+      el.className = 'lec-status ' + (using === lecMe ? 'mine' : 'busy');
+      el.textContent = using === lecMe
+        ? `내가 인강 사용 중 · ${hhmm} 시작 (${mins}분째)`
+        : `${LEC_SUBJ[using]} 인강 사용 중 · ${hhmm} 시작 (${mins}분째)`;
+      return;
+    }
+
+    const id = `${(now.getDay() + 6) % 7}-${now.getHours()}-${Math.floor(now.getMinutes() / 10)}`;
+    const a = lec.slots.sangmin.has(id), b = lec.slots.soi.has(id);
+    if (a && b) {
+      el.className = 'lec-status busy';
+      el.textContent = '지금 시간은 두 사람이 겹쳐 있어요';
+    } else if (a || b) {
+      const u = a ? 'sangmin' : 'soi';
+      el.className = 'lec-status reserved';
+      el.textContent = `지금은 ${LEC_NAMES[u]} 예약 시간이에요`;
+    } else {
+      el.className = 'lec-status free';
+      el.textContent = '지금은 인강 계정이 비어 있어요';
+    }
+  }
+
+  function lecRenderAll() {
+    document.querySelectorAll('.lec-cell').forEach(c => {
+      c.style.backgroundColor = lecCellColor(c.dataset.id);
+    });
+    lecRenderSummary();
+    lecRenderStatus();
+  }
+
+  function lecUpdateControls() {
+    ['sangmin', 'soi'].forEach(u => {
+      document.getElementById('lec-me-' + u).classList.toggle('active', lecMe === u);
+    });
+    ['paint', 'erase'].forEach(m => {
+      document.getElementById('lec-mode-' + m).classList.toggle('active', lecMode === m);
+    });
+  }
+
+  async function setLecMe(u) {
+    if (lecSaveTimer) { clearTimeout(lecSaveTimer); await lecSaveNow(); }
+    lecMe = u;
+    try { localStorage.setItem('lecMe', u); } catch (e) {}
+    lecUpdateControls();
+    lecRenderStatus();
+  }
+
+  function setLecMode(m) {
+    lecMode = m;
+    lecUpdateControls();
+  }
+
+  function lecScheduleSave() {
+    clearTimeout(lecSaveTimer);
+    lecSaveTimer = setTimeout(lecSaveNow, 400);
+  }
+
+  async function lecSaveNow() {
+    lecSaveTimer = null;
+    if (!window.db) return;
+    try {
+      // 배열은 통째로 교체되므로, 내 시간만 저장해도 상대 데이터는 건드리지 않음
+      await lecDoc().set({ [lecMe + 'Slots']: Array.from(lec.slots[lecMe]) }, { merge: true });
+    } catch (e) { console.error(e); }
+  }
+
+  async function clearMyLecture() {
+    if (!confirm(`${LEC_NAMES[lecMe]}의 인강 예약 시간을 전부 지울까요?`)) return;
+    lec.slots[lecMe] = new Set();
+    lecRenderAll();
+    await lecSaveNow();
+  }
+
+  async function startLectureUse() {
+    const cur = lec.nowUser;
+    const start = lec.nowStart ? new Date(lec.nowStart) : null;
+    const active = cur && start && !isNaN(start) && (new Date() - start) < LEC_STALE_MS;
+    if (active && cur !== lecMe) {
+      if (!confirm(`${LEC_SUBJ[cur]} 사용 중으로 표시돼 있어요. 그래도 시작할까요?`)) return;
+    }
+    lec.nowUser = lecMe;
+    lec.nowStart = new Date().toISOString();
+    lecRenderStatus();
+    try { await lecDoc().set({ nowUser: lec.nowUser, nowStart: lec.nowStart }, { merge: true }); }
+    catch (e) { console.error(e); }
+  }
+
+  async function endLectureUse() {
+    if (lec.nowUser && lec.nowUser !== lecMe) {
+      if (!confirm(`${LEC_SUBJ[lec.nowUser]} 사용 중으로 표시돼 있어요. 대신 끝낼까요?`)) return;
+    }
+    lec.nowUser = '';
+    lec.nowStart = '';
+    lecRenderStatus();
+    try { await lecDoc().set({ nowUser: '', nowStart: '' }, { merge: true }); }
+    catch (e) { console.error(e); }
+  }
+
+  function initLectureSync() {
+    if (!window.db) return;
+    if (unsubscribeLecture) unsubscribeLecture();
+    unsubscribeLecture = lecDoc().onSnapshot((snap) => {
+      if (snap.metadata.hasPendingWrites) return;
+      const data = snap.exists ? snap.data() : {};
+      ['sangmin', 'soi'].forEach(u => {
+        // 내가 칠하는 중이거나 저장 대기 중이면 내 데이터는 덮어쓰지 않음
+        if (u === lecMe && (lecPainting || lecSaveTimer)) return;
+        lec.slots[u] = new Set(Array.isArray(data[u + 'Slots']) ? data[u + 'Slots'] : []);
+      });
+      lec.nowUser = data.nowUser || '';
+      lec.nowStart = data.nowStart || '';
+      if (window.currentTab === 'lecture') lecRenderAll();
+    }, (error) => console.error('Lecture sync error:', error));
+  }
+
+  buildLectureGrid();
+  lecUpdateControls();
+  setInterval(() => { if (window.currentTab === 'lecture') lecRenderStatus(); }, 30000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && lecSaveTimer) { clearTimeout(lecSaveTimer); lecSaveNow(); }
+  });
+
   window.addEventListener('firebase-ready', () => {
     updateDateHeaders();
     initProgressTables();
     initCalendarSync();
+    initLectureSync();
     loadPlannerData();
     resizeAllTodoTextareas();
   });
