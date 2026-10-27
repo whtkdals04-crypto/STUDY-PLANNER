@@ -113,23 +113,49 @@
     .carry-over-item { font-size: 11px; color: #1e3a8a; display: flex; align-items: center; gap: 6px; font-weight: 600; }
 
     .active-bar {
-      padding: 8px 16px; border-bottom: 2px solid var(--border);
+      padding: 8px 16px; border-bottom: 1px solid var(--border-light);
       display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 700; background: #ffffff;
     }
     .color-badge { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--border); }
     .eraser-btn { margin-left: auto; padding: 4px 10px; font-size: 11px; font-weight: 700; background: #fff; border: 1.5px solid var(--border-light); border-radius: 6px; cursor: pointer; }
+
+    /* 과목 색 범례 */
+    .subject-legend {
+      padding: 6px 16px; border-bottom: 2px solid var(--border); background: #ffffff;
+      display: flex; flex-wrap: wrap; gap: 5px; align-items: center;
+    }
+    .subject-legend .legend-label { font-size: 10px; font-weight: 800; color: #64748b; margin-right: 2px; }
+    .subj-chip { font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 10px; color: #1e293b; border: 1px solid rgba(0,0,0,0.12); }
 
     .table { width: 100%; border-collapse: collapse; table-layout: fixed; }
     .table th, .table td { border: 1px solid var(--border-light); text-align: center; padding: 0; font-size: 10px; }
     .table th { background: #f1f5f9; font-weight: 800; color: var(--text); height: 34px; border-bottom: 2px solid var(--border); vertical-align: middle; }
     .th-date { display: block; font-size: 9px; font-weight: 700; color: #64748b; margin-top: 1px; }
 
-    .todo-cell { height: 155px; text-align: left; padding: 5px; vertical-align: top; background: #ffffff; }
-    .todo-item { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; border-radius: 5px; padding: 3px 6px; border: 1px solid rgba(0,0,0,0.06); }
-    .todo-control-group { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    /* 할 일 칸: 고정 높이 대신 내용만큼 늘어남 */
+    .todo-cell { min-height: 155px; text-align: left; padding: 4px; vertical-align: top; background: #ffffff; }
+    .todo-item {
+      display: flex; flex-direction: column; gap: 3px;
+      margin-bottom: 5px; border-radius: 6px; padding: 4px 5px;
+      border: 1px solid rgba(0,0,0,0.08);
+    }
+    .todo-top { display: flex; align-items: center; gap: 5px; min-width: 0; }
     .todo-item input[type="radio"],
-    .todo-item input[type="checkbox"] { width: 14px; height: 14px; margin: 0; cursor: pointer; accent-color: #3b82f6; }
-    .todo-item input[type="text"] { border: none; outline: none; width: 100%; font-size: 10px; background: transparent; color: var(--text); font-weight: 500; }
+    .todo-item input[type="checkbox"] { width: 14px; height: 14px; margin: 0; cursor: pointer; accent-color: #3b82f6; flex-shrink: 0; }
+    .subject-select {
+      flex: 1; min-width: 0; width: 100%;
+      font-size: 10px; font-weight: 800; color: #1e293b;
+      border: none; border-radius: 4px; padding: 1px 2px;
+      background: rgba(255,255,255,0.65); outline: none; cursor: pointer;
+      font-family: inherit;
+    }
+    .todo-item textarea {
+      width: 100%; border: none; outline: none; resize: none; overflow: hidden;
+      font-family: inherit; font-size: 11px; line-height: 1.4; font-weight: 500;
+      background: transparent; color: var(--text); padding: 0; margin: 0;
+      min-height: 16px; display: block;
+    }
+    .todo-item textarea::placeholder { color: rgba(15,23,42,0.35); }
 
     .time-col { width: 45px; background: #f1f5f9; font-weight: 800; color: var(--text); border-right: 2px solid var(--border) !important; }
     .slot-cell { height: 16px; cursor: pointer; border-right: 1px dashed var(--border-dashed); }
@@ -162,6 +188,10 @@
     .rate-cell.all-rate { background: #e0e7ff; color: #3730a3; }
     .rate-row td { border-top: 2px solid var(--border); }
     .progress-table th.rate-head { background: #e2e8f0; width: 70px; }
+
+    /* 과목(미분/적분/...) 구분: 과목이 바뀌는 줄마다 굵은 선 + 과목 색 띠 */
+    .progress-table tr.group-start td { border-top: 3px solid #334155; }
+    .progress-table td.unit-name { border-left-width: 6px; border-left-style: solid; }
 
     .progress-footer { margin-top: 12px; font-size: 11px; color: #64748b; font-weight: 600; text-align: right; }
 
@@ -259,11 +289,33 @@
     .day-time-pill { background: #e2e8f0; padding: 4px 8px; border-radius: 6px; font-size: 11px; margin-right: 4px; margin-bottom: 4px; display: inline-block; }
     .modal-day-group { margin-bottom: 14px; border-bottom: 1px dashed #e2e8f0; padding-bottom: 8px; }
     .modal-day-title { font-weight: 800; font-size: 12px; color: #3b82f6; margin-bottom: 6px; }
-    .modal-todo-item { font-size: 12px; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
-    .modal-todo-item.completed { text-decoration: line-through; color: #94a3b8; }
+    .modal-todo-item { font-size: 12px; display: flex; align-items: flex-start; gap: 6px; margin-bottom: 4px; }
+    .modal-todo-item.completed .modal-todo-text { text-decoration: line-through; color: #94a3b8; }
+    .modal-todo-text { white-space: pre-wrap; word-break: break-word; }
+    .subj-tag { font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 4px; color: #1e293b; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.1); }
   </style>
 </head>
 <body>
+
+<script>
+  // ───────── 과목 & 색상 (과목 = 색 고정) ─────────
+  const SUBJECTS = ['미분', '적분', '급수', '선형대수', '다변수', '공학수학', '영어'];
+  const SUBJECT_COLORS = {
+    '미분': '#ffb7b2',
+    '적분': '#fff176',
+    '급수': '#c8e6c9',
+    '선형대수': '#b3e5fc',
+    '다변수': '#c5cae9',
+    '공학수학': '#e1bee7',
+    '영어': '#ffcc80'
+  };
+  const NEUTRAL_COLOR = '#e2e8f0';
+  const DAY_KO = ['월', '화', '수', '목', '금', '토', '일'];
+
+  function getSubjectColor(name) { return SUBJECT_COLORS[name] || NEUTRAL_COLOR; }
+  // 새 줄의 기본 과목: 1~6번 줄은 예전 색 순서(미분~공학수학)를 그대로 따름
+  function defaultSubject(i) { return SUBJECTS[i] || ''; }
+</script>
 
 <div class="tab-container">
   <div id="tab-sangmin" class="tab-button sangmin active" onclick="switchTab('sangmin')">
@@ -349,8 +401,17 @@
     <div class="active-bar">
       <span>SELECTED:</span>
       <div id="activeColorBadge" class="color-badge" style="background: #ffb7b2;"></div>
-      <span id="activeTodoTitle" style="color: #334155;">[월요일] 1번</span>
+      <span id="activeTodoTitle" style="color: #334155;">[월요일] 1번 · 미분</span>
       <button class="eraser-btn" onclick="selectEraser()">🧹 지우개</button>
+    </div>
+
+    <div class="subject-legend">
+      <span class="legend-label">과목 색</span>
+      <script>
+        SUBJECTS.forEach(s => {
+          document.write(`<span class="subj-chip" style="background:${SUBJECT_COLORS[s]};">${s}</span>`);
+        });
+      </script>
     </div>
 
     <table class="table">
@@ -360,19 +421,21 @@
         </tr>
         <tr>
           <script>
-            const colors = ['#ffb7b2', '#fff176', '#c8e6c9', '#b3e5fc', '#c5cae9', '#e1bee7'];
-            const days = ['월','화','수','목','금','토','일'];
             for(let d=0; d<7; d++) {
               document.write(`<td class="todo-cell" data-day="${d}">`);
               for(let i=0; i<6; i++) {
-                const c = colors[i];
+                const defSubj = defaultSubject(i);
+                const opts = ['<option value="">과목</option>']
+                  .concat(SUBJECTS.map(s => `<option value="${s}" ${s === defSubj ? 'selected' : ''}>${s}</option>`))
+                  .join('');
                 document.write(`
-                  <div class="todo-item" style="background: ${c}44;">
-                    <div class="todo-control-group">
-                      <input type="radio" name="activeTodo" ${d===0 && i===0 ? 'checked' : ''} onchange="setActiveTodo('${c}', '${days[d]}요일 ${i+1}번', ${d})">
+                  <div class="todo-item" data-day="${d}" data-idx="${i}" style="background: ${getSubjectColor(defSubj)}66;">
+                    <div class="todo-top">
+                      <input type="radio" name="activeTodo" ${d===0 && i===0 ? 'checked' : ''} onchange="onTodoRadio(this)">
                       <input type="checkbox" onchange="onDataChanged()">
+                      <select class="subject-select" onchange="onSubjectChange(this)">${opts}</select>
                     </div>
-                    <input type="text" oninput="onDataChanged()" placeholder="${i+1}. 할 일">
+                    <textarea rows="1" oninput="autoResize(this); onDataChanged()" placeholder="${i+1}. 할 일"></textarea>
                   </div>
                 `);
               }
@@ -661,6 +724,47 @@
     return [];
   }
 
+  // ───────── 할 일 칸: 자동 높이 / 과목 색 ─────────
+  function autoResize(el) {
+    if (!el) return;
+    el.style.height = 'auto';
+    const h = el.scrollHeight;
+    if (h) el.style.height = h + 'px';
+  }
+
+  function resizeAllTodoTextareas() {
+    document.querySelectorAll('.todo-item textarea').forEach(autoResize);
+  }
+  window.addEventListener('resize', resizeAllTodoTextareas);
+  window.addEventListener('load', resizeAllTodoTextareas);
+
+  function applyRowSubject(item) {
+    const sel = item.querySelector('.subject-select');
+    item.style.background = getSubjectColor(sel.value) + '66';
+  }
+
+  // 선택된 줄(라디오)의 과목 색을 시간표 칠하기 색으로 사용
+  function onTodoRadio(radio) {
+    const item = radio.closest('.todo-item');
+    const d = parseInt(item.dataset.day, 10);
+    const i = parseInt(item.dataset.idx, 10);
+    const subj = item.querySelector('.subject-select').value;
+    setActiveTodo(getSubjectColor(subj), `[${DAY_KO[d]}요일] ${i + 1}번${subj ? ' · ' + subj : ''}`, d);
+  }
+
+  function onSubjectChange(sel) {
+    const item = sel.closest('.todo-item');
+    applyRowSubject(item);
+    const radio = item.querySelector('input[type="radio"]');
+    if (radio.checked) onTodoRadio(radio);
+    onDataChanged();
+  }
+
+  function refreshActiveFromRadio() {
+    const r = document.querySelector('input[name="activeTodo"]:checked');
+    if (r) onTodoRadio(r);
+  }
+
   // ───────── 하루 공부시간 합계 (1칸 = 10분) ─────────
   function updateDayTotals() {
     const counts = [0, 0, 0, 0, 0, 0, 0];
@@ -686,14 +790,19 @@
   // ───────── 진도표 (진도율 포함) ─────────
   function buildProgressBody(user, cols) {
     let html = '';
+    let prevSubj = null;
     UNITS.forEach((unit, u) => {
-      html += `<tr><td class="unit-name">${unit}</td>`;
+      const subj = unit.split(' ')[0];
+      const color = SUBJECT_COLORS[subj] || NEUTRAL_COLOR;
+      const isStart = subj !== prevSubj;
+      prevSubj = subj;
+      html += `<tr class="${isStart ? 'group-start' : ''}"><td class="unit-name" style="background:${color}66; border-left-color:${color};">${unit}</td>`;
       cols.forEach((_, c) => {
         html += `<td class="progress-cell" data-user="${user}" data-unit="${u}" data-col="${c}" onclick="toggleProgressCell(this)"></td>`;
       });
       html += `<td class="rate-cell row-rate" data-user="${user}" data-unit="${u}">0%</td></tr>`;
     });
-    html += `<tr class="rate-row"><td class="unit-name">진도율</td>`;
+    html += `<tr class="rate-row"><td class="unit-name" style="border-left-color:#94a3b8;">진도율</td>`;
     cols.forEach((_, c) => {
       html += `<td class="rate-cell col-rate" data-user="${user}" data-col="${c}">0%</td>`;
     });
@@ -852,7 +961,7 @@
       if (docSnap.metadata.hasPendingWrites) return;
 
       const active = document.activeElement;
-      const isTyping = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
+      const isTyping = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT');
 
       if (docSnap.exists && !isTyping && !saveTimer) {
         const data = docSnap.data();
@@ -893,9 +1002,10 @@
     document.querySelectorAll('.todo-cell').forEach((cell) => {
       const items = [];
       cell.querySelectorAll('.todo-item').forEach(item => {
-        const textVal = item.querySelector('input[type="text"]').value.trim();
+        const textVal = item.querySelector('textarea').value.trim();
         const isChecked = item.querySelector('input[type="checkbox"]').checked;
-        items.push({ checked: isChecked, text: textVal });
+        const subject = item.querySelector('.subject-select').value;
+        items.push({ checked: isChecked, text: textVal, subject: subject });
         if (textVal.length > 0) {
           totalTodoCount++;
           if (isChecked) completedTodoCount++;
@@ -972,10 +1082,16 @@
       document.querySelectorAll('.todo-cell').forEach((cell, cellIdx) => {
         const items = cell.querySelectorAll('.todo-item');
         getDayItems(data.todos[cellIdx]).forEach((itemData, itemIdx) => {
-          if (items[itemIdx]) {
-            items[itemIdx].querySelector('input[type="checkbox"]').checked = !!itemData.checked;
-            items[itemIdx].querySelector('input[type="text"]').value = itemData.text || '';
-          }
+          const row = items[itemIdx];
+          if (!row) return;
+          row.querySelector('input[type="checkbox"]').checked = !!itemData.checked;
+          row.querySelector('textarea').value = itemData.text || '';
+
+          // 예전 데이터(subject 없음)는 줄 번호 순서 색(미분~공학수학)으로 복원
+          let subj = (itemData.subject !== undefined) ? itemData.subject : defaultSubject(itemIdx);
+          if (subj && !SUBJECTS.includes(subj)) subj = '';
+          row.querySelector('.subject-select').value = subj;
+          applyRowSubject(row);
         });
       });
     }
@@ -986,16 +1102,24 @@
       });
     }
     updateDayTotals();
+    resizeAllTodoTextareas();
+    refreshActiveFromRadio();
   }
 
   function clearPlannerUI() {
     document.querySelectorAll('.weekly-memo').forEach(i => i.value = '');
     document.querySelectorAll('.nextweek-memo').forEach(i => i.value = '');
     document.querySelectorAll('.slot-cell').forEach(s => s.style.backgroundColor = '');
-    document.querySelectorAll('.todo-item input[type="text"]').forEach(i => i.value = '');
-    document.querySelectorAll('.todo-item input[type="checkbox"]').forEach(c => c.checked = false);
+    document.querySelectorAll('.todo-item').forEach(row => {
+      row.querySelector('textarea').value = '';
+      row.querySelector('input[type="checkbox"]').checked = false;
+      row.querySelector('.subject-select').value = defaultSubject(parseInt(row.dataset.idx, 10));
+      applyRowSubject(row);
+    });
     document.getElementById('carryOverContainer').style.display = 'none';
     updateDayTotals();
+    resizeAllTodoTextareas();
+    refreshActiveFromRadio();
   }
 
   function renderCarryOverUI(carriedItems) {
@@ -1007,7 +1131,7 @@
     }
     let html = '';
     carriedItems.forEach(item => {
-      html += `<div class="carry-over-item"><span>📌 [${item.dayName}]</span> <span>${item.text}</span></div>`;
+      html += `<div class="carry-over-item"><span>📌 [${escapeHtml(item.dayName)}]</span> <span>${escapeHtml(item.text)}</span></div>`;
     });
     list.innerHTML = html;
     container.style.display = 'block';
@@ -1017,14 +1141,15 @@
     if (!confirm('현재 주차 내용을 기출 보관함에 백업하고, 미완료 할 일은 이월하며, NEXT WEEK 메모는 새 주의 WEEKLY GOALS로 옮겨 새 주차 계획표로 리셋하시겠습니까?')) return;
 
     try {
-      const dayNames = ['월', '화', '수', '목', '금', '토', '일'];
       let uncompletedTodos = [];
       document.querySelectorAll('.todo-cell').forEach((cell, dIdx) => {
         cell.querySelectorAll('.todo-item').forEach(item => {
-          const textVal = item.querySelector('input[type="text"]').value.trim();
+          const textVal = item.querySelector('textarea').value.trim();
           const isChecked = item.querySelector('input[type="checkbox"]').checked;
+          const subj = item.querySelector('.subject-select').value;
           if (textVal && !isChecked) {
-            uncompletedTodos.push(`${dayNames[dIdx]}: ${textVal}`);
+            const oneLine = textVal.replace(/\s*\n\s*/g, ' ');
+            uncompletedTodos.push(`${DAY_KO[dIdx]}: ${subj ? '[' + subj + '] ' : ''}${oneLine}`);
           }
         });
       });
@@ -1049,7 +1174,7 @@
       for (let d = 0; d < 7; d++) {
         const dayItems = [];
         for (let i = 0; i < 6; i++) {
-          dayItems.push({ checked: false, text: '' });
+          dayItems.push({ checked: false, text: '', subject: defaultSubject(i) });
         }
         emptyTodos.push({ items: dayItems });
       }
@@ -1152,7 +1277,6 @@
     const item = (window.archiveDocsCache || []).find(d => d.id === docId);
     if (!item) return;
 
-    const dayNames = ['월', '화', '수', '목', '금', '토', '일'];
     const hours = Math.floor((item.totalMinutes || 0) / 60);
     const mins = (item.totalMinutes || 0) % 60;
 
@@ -1165,7 +1289,7 @@
         const dMins = cnt * 10;
         const dH = Math.floor(dMins / 60);
         const dM = dMins % 60;
-        dayTimeHtml += `<div class="day-time-pill"><b>${dayNames[idx]}:</b> ${dH > 0 ? dH + '시간 ' : ''}${dM}분</div>`;
+        dayTimeHtml += `<div class="day-time-pill"><b>${DAY_KO[idx]}:</b> ${dH > 0 ? dH + '시간 ' : ''}${dM}분</div>`;
       });
     }
     document.getElementById('modalDayTimes').innerHTML = dayTimeHtml;
@@ -1173,17 +1297,17 @@
     let memoHtml = '';
     if (item.weeklyMemos) {
       item.weeklyMemos.forEach((m, idx) => {
-        if (m && m.trim()) memoHtml += `<li><b>[Goal ${idx + 1}]</b> ${m}</li>`;
+        if (m && m.trim()) memoHtml += `<li><b>[Goal ${idx + 1}]</b> ${escapeHtml(m)}</li>`;
       });
     }
     if (item.mustDoMemos) {
       item.mustDoMemos.forEach((m, idx) => {
-        if (m && m.trim()) memoHtml += `<li style="color:#e11d48;"><b>[Must-Do ${idx + 1}]</b> ${m}</li>`;
+        if (m && m.trim()) memoHtml += `<li style="color:#e11d48;"><b>[Must-Do ${idx + 1}]</b> ${escapeHtml(m)}</li>`;
       });
     }
     if (item.nextWeekMemos) {
       item.nextWeekMemos.forEach((m, idx) => {
-        if (m && m.trim()) memoHtml += `<li style="color:#15803d;"><b>[Next ${idx + 1}]</b> ${m}</li>`;
+        if (m && m.trim()) memoHtml += `<li style="color:#15803d;"><b>[Next ${idx + 1}]</b> ${escapeHtml(m)}</li>`;
       });
     }
     document.getElementById('modalMemos').innerHTML = memoHtml || '<li style="color:#94a3b8;">작성된 목표가 없습니다.</li>';
@@ -1194,16 +1318,20 @@
         let itemsHtml = '';
         getDayItems(dayTodos).forEach(t => {
           if (t && t.text && t.text.trim()) {
+            const subjTag = (t.subject && SUBJECT_COLORS[t.subject])
+              ? `<span class="subj-tag" style="background:${SUBJECT_COLORS[t.subject]};">${escapeHtml(t.subject)}</span>`
+              : '';
             itemsHtml += `
               <div class="modal-todo-item ${t.checked ? 'completed' : ''}">
                 <span>${t.checked ? '✓' : '○'}</span>
-                <span>${t.text}</span>
+                ${subjTag}
+                <span class="modal-todo-text">${escapeHtml(t.text)}</span>
               </div>
             `;
           }
         });
         if (itemsHtml) {
-          todoListHtml += `<div class="modal-day-group"><div class="modal-day-title">${dayNames[dIdx]}요일</div>${itemsHtml}</div>`;
+          todoListHtml += `<div class="modal-day-group"><div class="modal-day-title">${DAY_KO[dIdx]}요일</div>${itemsHtml}</div>`;
         }
       });
     }
@@ -1502,6 +1630,7 @@
     initProgressTables();
     initCalendarSync();
     loadPlannerData();
+    resizeAllTodoTextareas();
   });
 </script>
 </body>
