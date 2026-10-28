@@ -1,4 +1,4 @@
-. <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
@@ -63,6 +63,7 @@
     .tab-button.progress-soi.active { color: #e11d48; }
     .tab-button.archive.active { color: #8b5cf6; }
     .tab-button.calendar.active { color: #059669; }
+    .tab-button.notes.active { color: #d97706; }
 
     .planner-card {
       width: 100%; max-width: 980px; background: #ffffff;
@@ -296,6 +297,15 @@
     .lec-totals { margin-top: 8px; font-size: 11px; font-weight: 700; color: #64748b; }
     .lec-note { margin-top: 6px; font-size: 11px; color: #94a3b8; font-weight: 600; }
 
+    /* ───────── 메모장 (애플펜슬) ───────── */
+    .notes-container { padding: 12px; background: #fff; }
+    .note-bar { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin-bottom: 8px; }
+    .note-bar select { padding: 6px; border: 1.5px solid var(--border-light); border-radius: 8px; font-size: 12px; font-weight: 700; max-width: 140px; }
+    .note-color { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1.5px #cbd5e1; cursor: pointer; padding: 0; }
+    .note-color.sel { box-shadow: 0 0 0 3px #0f172a; }
+    .note-wrap { border: 1.5px solid var(--border-light); border-radius: 8px; background: #fff; overflow: hidden; line-height: 0; }
+    #noteCanvas { display: block; touch-action: pan-y pinch-zoom; user-select: none; -webkit-user-select: none; }
+
     .modal-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(15, 23, 42, 0.6); display: none; align-items: center; justify-content: center;
@@ -364,6 +374,9 @@
   </div>
   <div id="tab-archive" class="tab-button archive" onclick="switchTab('archive')">
     <span>📂</span> PLANNER 기출
+  </div>
+  <div id="tab-notes" class="tab-button notes" onclick="switchTab('notes')">
+    <span>✏️</span> 메모장
   </div>
   <div id="tab-calendar" class="tab-button calendar" onclick="switchTab('calendar')">
     <span>📅</span> 캘린더
@@ -590,6 +603,29 @@
       <div class="exam-list-title">📌 다가오는 시험 & 일정 D-Day</div>
       <div id="examCardGrid" class="exam-card-grid"></div>
     </div>
+  </div>
+
+  <div id="notesView" class="notes-container" style="display: none;">
+    <div class="note-bar">
+      <button id="note-own-sangmin" class="lec-btn sangmin" onclick="noteSetOwner('sangmin')">상민</button>
+      <button id="note-own-soi" class="lec-btn soi" onclick="noteSetOwner('soi')">소이</button>
+      <select id="notePageSel" onchange="noteSelectPage(this.value)"></select>
+      <button class="lec-btn" onclick="noteNewPage()">＋ 새 페이지</button>
+      <button class="lec-btn" onclick="noteRename()">이름</button>
+      <button class="lec-btn danger" onclick="noteDeletePage()">삭제</button>
+    </div>
+    <div class="note-bar">
+      <button id="note-tool-pen" class="lec-btn mode" onclick="noteSetTool('pen')">✏️ 펜</button>
+      <button id="note-tool-hl" class="lec-btn mode" onclick="noteSetTool('hl')">🖍 형광펜</button>
+      <button id="note-tool-eraser" class="lec-btn mode" onclick="noteSetTool('eraser')">🧽 지우개</button>
+      <span id="noteColors" style="display:flex; gap:8px; margin:0 4px;"></span>
+      <input type="range" id="noteWidth" min="1" max="10" value="3" style="width:90px;">
+      <button class="lec-btn" onclick="noteUndo()">↩ 실행취소</button>
+      <button class="lec-btn danger" onclick="noteClear()">전체 지우기</button>
+      <label style="font-size:11px; font-weight:700; color:#475569;"><input type="checkbox" id="noteFinger" onchange="noteFingerChange()"> 손가락으로도 쓰기</label>
+      <span id="noteStatus" style="font-size:11px; color:#94a3b8; font-weight:700;"></span>
+    </div>
+    <div class="note-wrap" id="noteWrap"><canvas id="noteCanvas"></canvas></div>
   </div>
 
   <div id="lectureView" class="lecture-container" style="display: none;">
@@ -1052,7 +1088,7 @@
   }
 
   async function savePlannerData(isExplicitSave = false) {
-    if (['archive', 'progress-sangmin', 'progress-soi', 'calendar', 'lecture'].includes(window.currentTab) || !window.db) return;
+    if (['archive', 'progress-sangmin', 'progress-soi', 'calendar', 'lecture', 'notes'].includes(window.currentTab) || !window.db) return;
     if (!window.plannerLoaded && !isExplicitSave) return;
 
     const { weekKey, rangeStr } = getCurrentWeekKeyAndRange();
@@ -1626,13 +1662,14 @@
   }
 
   async function switchTab(tab) {
+    await notesFlush();
     await flushSave();
     if (lecSaveTimer) { clearTimeout(lecSaveTimer); await lecSaveNow(); }
     window.currentTab = tab;
     document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
     document.getElementById(`tab-${tab}`).classList.add('active');
 
-    const views = ['plannerView', 'progressSangminView', 'progressSoiView', 'archiveView', 'calendarView', 'lectureView'];
+    const views = ['plannerView', 'progressSangminView', 'progressSoiView', 'archiveView', 'calendarView', 'lectureView', 'notesView'];
     views.forEach(v => document.getElementById(v).style.display = 'none');
 
     const ownerBadge = document.getElementById('plannerOwnerBadge');
@@ -1647,6 +1684,9 @@
     } else if (tab === 'calendar') {
       document.getElementById('calendarView').style.display = 'block';
       renderCalendar();
+    } else if (tab === 'notes') {
+      document.getElementById('notesView').style.display = 'block';
+      notesOpen();
     } else if (tab === 'lecture') {
       document.getElementById('lectureView').style.display = 'block';
       lecUpdateControls();
@@ -1957,11 +1997,269 @@
     }, (error) => console.error('Lecture sync error:', error));
   }
 
+  // ───────── 메모장 (애플펜슬 필기) ─────────
+  const NOTE_W = 1000, NOTE_H = 1400;
+  const NOTE_COLORS = ['#0f172a', '#ef4444', '#2563eb', '#16a34a', '#f59e0b'];
+  const note = { owner: 'sangmin', pages: [], cur: null, strokes: [], hist: [], tool: 'pen', color: '#0f172a', draw: null, pid: null, erasing: false, erased: false, built: false, ctx: null, scale: 1 };
+  let noteSaveTimer = null;
+  const noteIdx = () => window.db.collection('settings').doc('notes_index');
+  const noteDocRef = id => window.db.collection('settings').doc('note_' + id);
+  const noteStatus = t => { const e = document.getElementById('noteStatus'); if (e) e.textContent = t; };
+
+  function noteBuild() {
+    if (note.built) return;
+    note.built = true;
+    document.getElementById('noteColors').innerHTML = NOTE_COLORS.map(c =>
+      `<button class="note-color" data-c="${c}" style="background:${c}" onclick="noteSetColor('${c}')"></button>`).join('');
+    const cv = document.getElementById('noteCanvas');
+    note.ctx = cv.getContext('2d');
+    cv.addEventListener('pointerdown', noteDown);
+    cv.addEventListener('pointermove', noteMove);
+    cv.addEventListener('pointerup', noteUp);
+    cv.addEventListener('pointercancel', noteUp);
+    window.addEventListener('resize', () => { if (window.currentTab === 'notes') noteResize(); });
+    noteSetTool('pen');
+    noteSetColor(note.color);
+  }
+
+  function noteResize() {
+    const cv = document.getElementById('noteCanvas');
+    const w = document.getElementById('noteWrap').clientWidth;
+    if (!w) return;
+    const h = Math.round(w * NOTE_H / NOTE_W), dpr = window.devicePixelRatio || 1;
+    cv.style.width = w + 'px'; cv.style.height = h + 'px';
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    note.scale = cv.width / NOTE_W;
+    noteRedraw();
+  }
+
+  function noteDrawStroke(s, from) {
+    const ctx = note.ctx, p = s.p, st = from || 0;
+    ctx.save();
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = s.c; ctx.lineWidth = s.w;
+    ctx.globalAlpha = s.h ? 0.35 : 1;
+    ctx.beginPath();
+    ctx.moveTo(p[st * 2], p[st * 2 + 1]);
+    if (p.length === 2) ctx.lineTo(p[0] + 0.01, p[1]);
+    for (let i = st + 1; i < p.length / 2; i++) ctx.lineTo(p[i * 2], p[i * 2 + 1]);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function noteRedraw() {
+    const ctx = note.ctx, cv = ctx.canvas;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.setTransform(note.scale, 0, 0, note.scale, 0, 0);
+    ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let y = 50; y < NOTE_H; y += 50) { ctx.moveTo(0, y); ctx.lineTo(NOTE_W, y); }
+    ctx.stroke();
+    note.strokes.forEach(s => noteDrawStroke(s));
+    if (note.draw) noteDrawStroke(note.draw);
+  }
+
+  function noteAllowed(e) { return e.pointerType !== 'touch' || document.getElementById('noteFinger').checked; }
+  function notePt(e) {
+    const r = document.getElementById('noteCanvas').getBoundingClientRect();
+    const k = NOTE_W / r.width;
+    return [Math.round((e.clientX - r.left) * k * 10) / 10, Math.round((e.clientY - r.top) * k * 10) / 10];
+  }
+
+  function noteErase(x, y) {
+    const r = 18, n = note.strokes.length;
+    note.strokes = note.strokes.filter(s => {
+      const lim = r + s.w / 2;
+      for (let i = 0; i < s.p.length; i += 2) {
+        if (Math.hypot(s.p[i] - x, s.p[i + 1] - y) <= lim) return false;
+      }
+      return true;
+    });
+    if (note.strokes.length !== n) { note.erased = true; noteRedraw(); }
+  }
+
+  function noteDown(e) {
+    if (!noteAllowed(e) || !note.cur) return;
+    e.preventDefault();
+    e.target.setPointerCapture(e.pointerId);
+    note.pid = e.pointerId;
+    const [x, y] = notePt(e);
+    note.hist.push(note.strokes.slice());
+    if (note.hist.length > 40) note.hist.shift();
+    if (note.tool === 'eraser') { note.erasing = true; note.erased = false; noteErase(x, y); return; }
+    const w = +document.getElementById('noteWidth').value;
+    note.draw = { c: note.color, w: note.tool === 'hl' ? w * 5 : w, h: note.tool === 'hl', p: [x, y] };
+  }
+
+  function noteMove(e) {
+    if (e.pointerId !== note.pid || (!note.draw && !note.erasing)) return;
+    e.preventDefault();
+    const evs = (e.getCoalescedEvents && e.getCoalescedEvents().length) ? e.getCoalescedEvents() : [e];
+    for (const ev of evs) {
+      const [x, y] = notePt(ev);
+      if (note.erasing) { noteErase(x, y); continue; }
+      const s = note.draw, prev = s.p.length / 2;
+      s.p.push(x, y);
+      if (!s.h) noteDrawStroke(s, prev - 1);
+    }
+    if (note.draw && note.draw.h) noteRedraw();
+  }
+
+  function noteUp(e) {
+    if (e.pointerId !== note.pid) return;
+    note.pid = null;
+    if (note.erasing) {
+      note.erasing = false;
+      if (note.erased) noteSchedSave(); else note.hist.pop();
+      return;
+    }
+    if (note.draw) {
+      note.strokes.push(note.draw);
+      note.draw = null;
+      noteRedraw();
+      noteSchedSave();
+    }
+  }
+
+  function noteUndo() {
+    if (!note.hist.length) return;
+    note.strokes = note.hist.pop();
+    noteRedraw();
+    noteSchedSave();
+  }
+
+  function noteClear() {
+    if (!note.strokes.length || !confirm('이 페이지를 전부 지울까요?')) return;
+    note.hist.push(note.strokes.slice());
+    note.strokes = [];
+    noteRedraw();
+    noteSchedSave();
+  }
+
+  function noteSetTool(t) {
+    note.tool = t;
+    ['pen', 'hl', 'eraser'].forEach(x => document.getElementById('note-tool-' + x).classList.toggle('active', x === t));
+  }
+  function noteSetColor(c) {
+    note.color = c;
+    if (note.tool === 'eraser') noteSetTool('pen');
+    document.querySelectorAll('.note-color').forEach(b => b.classList.toggle('sel', b.dataset.c === c));
+  }
+  function noteFingerChange() {
+    document.getElementById('noteCanvas').style.touchAction =
+      document.getElementById('noteFinger').checked ? 'none' : 'pan-y pinch-zoom';
+  }
+
+  function noteSchedSave() {
+    clearTimeout(noteSaveTimer);
+    noteSaveTimer = setTimeout(noteSaveNow, 700);
+    noteStatus('저장 중…');
+  }
+  async function noteSaveNow() {
+    noteSaveTimer = null;
+    if (!note.cur || !window.db) return;
+    const json = JSON.stringify(note.strokes);
+    if (json.length > 900000) { alert('이 페이지가 너무 커졌어요. 새 페이지에 이어서 써 주세요.'); return; }
+    try {
+      await noteDocRef(note.cur).set({ strokes: json, updatedAt: new Date().toISOString() });
+      noteStatus('저장됨 ✓');
+    } catch (err) { console.error(err); noteStatus('저장 실패'); }
+  }
+  async function notesFlush() {
+    if (noteSaveTimer) { clearTimeout(noteSaveTimer); await noteSaveNow(); }
+  }
+
+  function noteUpdateOwnerBtns() {
+    ['sangmin', 'soi'].forEach(u => document.getElementById('note-own-' + u).classList.toggle('active', note.owner === u));
+  }
+  function noteRenderSel() {
+    const sel = document.getElementById('notePageSel');
+    sel.innerHTML = note.pages.map(p => `<option value="${p.id}">${escapeHtml(p.title)}</option>`).join('');
+    sel.value = note.cur;
+  }
+  async function noteGetAll() {
+    const snap = await noteIdx().get();
+    return snap.exists ? (snap.data().pages || []) : [];
+  }
+  async function noteLoadPages() {
+    if (!window.db) return;
+    try {
+      const all = await noteGetAll();
+      note.pages = all.filter(p => p.owner === note.owner);
+      if (!note.pages.length) { await noteNewPage(); return; }
+      if (!note.pages.some(p => p.id === note.cur)) note.cur = note.pages[note.pages.length - 1].id;
+      noteRenderSel();
+      await noteLoadStrokes();
+    } catch (err) { console.error(err); noteStatus('불러오기 실패'); }
+  }
+  async function noteLoadStrokes() {
+    note.strokes = []; note.hist = [];
+    try {
+      const snap = await noteDocRef(note.cur).get();
+      if (snap.exists) note.strokes = JSON.parse(snap.data().strokes || '[]');
+    } catch (err) { console.error(err); }
+    noteRedraw();
+    noteStatus('');
+  }
+  async function noteSelectPage(id) {
+    await notesFlush();
+    note.cur = id;
+    await noteLoadStrokes();
+  }
+  async function noteNewPage() {
+    await notesFlush();
+    const all = await noteGetAll();
+    const n = all.filter(p => p.owner === note.owner).length + 1;
+    const page = { id: note.owner + '_' + Date.now(), owner: note.owner, title: '메모 ' + n };
+    all.push(page);
+    await noteIdx().set({ pages: all });
+    note.pages.push(page);
+    note.cur = page.id; note.strokes = []; note.hist = [];
+    noteRenderSel(); noteRedraw();
+  }
+  async function noteRename() {
+    const p = note.pages.find(x => x.id === note.cur);
+    if (!p) return;
+    const t = prompt('페이지 이름', p.title);
+    if (!t || !t.trim()) return;
+    const all = await noteGetAll();
+    const q = all.find(x => x.id === p.id);
+    if (q) q.title = t.trim();
+    p.title = t.trim();
+    await noteIdx().set({ pages: all });
+    noteRenderSel();
+  }
+  async function noteDeletePage() {
+    if (!note.cur || !confirm('이 페이지를 삭제할까요? 복구할 수 없어요.')) return;
+    clearTimeout(noteSaveTimer); noteSaveTimer = null;
+    const id = note.cur;
+    const all = (await noteGetAll()).filter(x => x.id !== id);
+    await noteIdx().set({ pages: all });
+    try { await noteDocRef(id).delete(); } catch (err) { console.error(err); }
+    note.cur = null;
+    await noteLoadPages();
+  }
+  async function noteSetOwner(u) {
+    await notesFlush();
+    note.owner = u; note.cur = null;
+    noteUpdateOwnerBtns();
+    await noteLoadPages();
+  }
+  function notesOpen() {
+    noteBuild();
+    note.owner = (typeof lecMe === 'string') ? lecMe : 'sangmin';
+    noteUpdateOwnerBtns();
+    noteResize();
+    noteLoadPages();
+  }
+
   buildLectureGrid();
   lecUpdateControls();
   setInterval(() => { if (window.currentTab === 'lecture') lecRenderStatus(); }, 30000);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden' && lecSaveTimer) { clearTimeout(lecSaveTimer); lecSaveNow(); }
+    if (document.visibilityState === 'hidden' && noteSaveTimer) { notesFlush(); }
   });
 
   window.addEventListener('firebase-ready', () => {
