@@ -300,6 +300,11 @@
     /* ───────── 메모장 (포스트잇 크기, 애플펜슬) ───────── */
     #noteFab { position: fixed; right: 14px; bottom: 18px; z-index: 860; width: 54px; height: 54px; border-radius: 50%; border: 2px solid var(--border); background: #fde047; font-size: 24px; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.25); padding: 0; }
     #notesView { position: fixed; right: 12px; bottom: 84px; z-index: 850; width: 340px; max-width: calc(100vw - 24px); background: #fff9c4; border: 2px solid #ca8a04; border-radius: 6px 6px 14px 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); padding: 8px; }
+    #notesView, #notesView * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+    #notesView button, #notesView select, #notesView input { -webkit-user-select: none; user-select: none; }
+    #notesView, #notesView * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+    #notesView button, #notesView select, #notesView label { touch-action: manipulation; }
+    #notesView input[type="range"] { touch-action: pan-x; }
     .note-handle { cursor: grab; touch-action: none; font-size: 11px; font-weight: 800; color: #92400e; text-align: center; padding: 2px 0 7px; user-select: none; -webkit-user-select: none; }
     .note-bar { display: flex; flex-wrap: wrap; gap: 4px 5px; align-items: center; margin-bottom: 6px; }
     .nb { padding: 4px 8px; font-size: 12px; font-weight: 800; border-radius: 12px; border: 1.5px solid #ca8a04; background: #fffef0; color: #334155; cursor: pointer; font-family: inherit; line-height: 1.2; }
@@ -312,7 +317,7 @@
     .note-color { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1.5px #a8a29e; cursor: pointer; padding: 0; }
     .note-color.sel { box-shadow: 0 0 0 2.5px #0f172a; }
     .note-wrap { border: 1.5px solid #ca8a04; border-radius: 6px; background: #fffef0; overflow: hidden; line-height: 0; }
-    #noteCanvas { display: block; touch-action: pan-y pinch-zoom; user-select: none; -webkit-user-select: none; }
+    #noteCanvas { display: block; touch-action: none; user-select: none; -webkit-user-select: none; }
 
     .modal-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -2157,8 +2162,7 @@
     document.querySelectorAll('.note-color').forEach(b => b.classList.toggle('sel', b.dataset.c === c));
   }
   function noteFingerChange() {
-    document.getElementById('noteCanvas').style.touchAction =
-      document.getElementById('noteFinger').checked ? 'none' : 'pan-y pinch-zoom';
+    document.getElementById('noteCanvas').style.touchAction = 'none';
   }
 
   function noteSchedSave() {
@@ -2271,6 +2275,11 @@
     } catch (e) {}
     noteClampPos();
   }
+  (function noteNoSelect() {
+    const v = document.getElementById('notesView'), cv = document.getElementById('noteCanvas');
+    ['selectstart', 'contextmenu', 'dragstart'].forEach(ev => v.addEventListener(ev, e => e.preventDefault()));
+    ['touchstart', 'touchmove'].forEach(ev => cv.addEventListener(ev, e => e.preventDefault(), { passive: false }));
+  })();
   (function noteDragInit() {
     const v = document.getElementById('notesView'), h = document.getElementById('noteHandle');
     let dx = 0, dy = 0, drag = false;
@@ -2297,13 +2306,30 @@
     h.addEventListener('pointercancel', end);
     window.addEventListener('resize', () => { if (v.style.display === 'block') noteClampPos(); });
   })();
+  function noteLock(on) {
+    ['.tab-container', '.planner-card'].forEach(sel => {
+      const el = document.querySelector(sel);
+      if (el) { if (on) el.setAttribute('inert', ''); else el.removeAttribute('inert'); }
+    });
+    try { window.getSelection().removeAllRanges(); } catch (e) {}
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  }
+  (function noteNoSelect() {
+    const v = document.getElementById('notesView');
+    ['contextmenu', 'selectstart', 'dragstart'].forEach(ev => v.addEventListener(ev, e => e.preventDefault()));
+    const cv = document.getElementById('noteCanvas');
+    ['touchstart', 'touchmove'].forEach(ev => cv.addEventListener(ev, e => { e.preventDefault(); }, { passive: false }));
+    v.addEventListener('pointerdown', () => { try { window.getSelection().removeAllRanges(); } catch (e) {} });
+  })();
   function toggleNotes() {
     const v = document.getElementById('notesView');
     if (v.style.display === 'block') {
       notesFlush();
       v.style.display = 'none';
+      noteLock(false);
     } else {
       v.style.display = 'block';
+      noteLock(true);
       noteApplyPos();
       notesOpen();
     }
