@@ -297,13 +297,21 @@
     .lec-totals { margin-top: 8px; font-size: 11px; font-weight: 700; color: #64748b; }
     .lec-note { margin-top: 6px; font-size: 11px; color: #94a3b8; font-weight: 600; }
 
-    /* ───────── 메모장 (애플펜슬) ───────── */
-    .notes-container { padding: 12px; background: #fff; }
-    .note-bar { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin-bottom: 8px; }
-    .note-bar select { padding: 6px; border: 1.5px solid var(--border-light); border-radius: 8px; font-size: 12px; font-weight: 700; max-width: 140px; }
-    .note-color { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1.5px #cbd5e1; cursor: pointer; padding: 0; }
-    .note-color.sel { box-shadow: 0 0 0 3px #0f172a; }
-    .note-wrap { border: 1.5px solid var(--border-light); border-radius: 8px; background: #fff; overflow: hidden; line-height: 0; }
+    /* ───────── 메모장 (포스트잇 크기, 애플펜슬) ───────── */
+    #noteFab { position: fixed; right: 14px; bottom: 18px; z-index: 860; width: 54px; height: 54px; border-radius: 50%; border: 2px solid var(--border); background: #fde047; font-size: 24px; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.25); padding: 0; }
+    #notesView { position: fixed; right: 12px; bottom: 84px; z-index: 850; width: 340px; max-width: calc(100vw - 24px); background: #fff9c4; border: 2px solid #ca8a04; border-radius: 6px 6px 14px 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); padding: 8px; }
+    .note-handle { cursor: grab; touch-action: none; font-size: 11px; font-weight: 800; color: #92400e; text-align: center; padding: 2px 0 7px; user-select: none; -webkit-user-select: none; }
+    .note-bar { display: flex; flex-wrap: wrap; gap: 4px 5px; align-items: center; margin-bottom: 6px; }
+    .nb { padding: 4px 8px; font-size: 12px; font-weight: 800; border-radius: 12px; border: 1.5px solid #ca8a04; background: #fffef0; color: #334155; cursor: pointer; font-family: inherit; line-height: 1.2; }
+    .nb.active { background: #0f172a; border-color: #0f172a; color: #fff; }
+    .nb.sangmin.active { background: #3b82f6; border-color: #3b82f6; }
+    .nb.soi.active { background: #ec4899; border-color: #ec4899; }
+    .nb.danger { color: #ef4444; border-color: #fca5a5; }
+    .nb.save { background: #16a34a; border-color: #16a34a; color: #fff; }
+    #notePageSel { padding: 3px; border: 1.5px solid #ca8a04; border-radius: 8px; font-size: 11px; font-weight: 700; max-width: 90px; background: #fffef0; }
+    .note-color { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1.5px #a8a29e; cursor: pointer; padding: 0; }
+    .note-color.sel { box-shadow: 0 0 0 2.5px #0f172a; }
+    .note-wrap { border: 1.5px solid #ca8a04; border-radius: 6px; background: #fffef0; overflow: hidden; line-height: 0; }
     #noteCanvas { display: block; touch-action: pan-y pinch-zoom; user-select: none; -webkit-user-select: none; }
 
     .modal-overlay {
@@ -374,9 +382,6 @@
   </div>
   <div id="tab-archive" class="tab-button archive" onclick="switchTab('archive')">
     <span>📂</span> PLANNER 기출
-  </div>
-  <div id="tab-notes" class="tab-button notes" onclick="switchTab('notes')">
-    <span>✏️</span> 메모장
   </div>
   <div id="tab-calendar" class="tab-button calendar" onclick="switchTab('calendar')">
     <span>📅</span> 캘린더
@@ -605,29 +610,6 @@
     </div>
   </div>
 
-  <div id="notesView" class="notes-container" style="display: none;">
-    <div class="note-bar">
-      <button id="note-own-sangmin" class="lec-btn sangmin" onclick="noteSetOwner('sangmin')">상민</button>
-      <button id="note-own-soi" class="lec-btn soi" onclick="noteSetOwner('soi')">소이</button>
-      <select id="notePageSel" onchange="noteSelectPage(this.value)"></select>
-      <button class="lec-btn" onclick="noteNewPage()">＋ 새 페이지</button>
-      <button class="lec-btn" onclick="noteRename()">이름</button>
-      <button class="lec-btn danger" onclick="noteDeletePage()">삭제</button>
-    </div>
-    <div class="note-bar">
-      <button id="note-tool-pen" class="lec-btn mode" onclick="noteSetTool('pen')">✏️ 펜</button>
-      <button id="note-tool-hl" class="lec-btn mode" onclick="noteSetTool('hl')">🖍 형광펜</button>
-      <button id="note-tool-eraser" class="lec-btn mode" onclick="noteSetTool('eraser')">🧽 지우개</button>
-      <span id="noteColors" style="display:flex; gap:8px; margin:0 4px;"></span>
-      <input type="range" id="noteWidth" min="1" max="10" value="3" style="width:90px;">
-      <button class="lec-btn" onclick="noteUndo()">↩ 실행취소</button>
-      <button class="lec-btn danger" onclick="noteClear()">전체 지우기</button>
-      <label style="font-size:11px; font-weight:700; color:#475569;"><input type="checkbox" id="noteFinger" onchange="noteFingerChange()"> 손가락으로도 쓰기</label>
-      <span id="noteStatus" style="font-size:11px; color:#94a3b8; font-weight:700;"></span>
-    </div>
-    <div class="note-wrap" id="noteWrap"><canvas id="noteCanvas"></canvas></div>
-  </div>
-
   <div id="lectureView" class="lecture-container" style="display: none;">
     <div class="lec-top">
       <div class="lec-group">
@@ -669,6 +651,36 @@
     <div id="lecOverlap"></div>
     <div id="lecTotals" class="lec-totals"></div>
     <div class="lec-note">매주 반복되는 시간표예요. 1칸 = 10분. 칠한 시간은 상대 화면에도 바로 보여요.</div>
+  </div>
+</div>
+
+<button id="noteFab" onclick="toggleNotes()" title="메모장">✏️</button>
+
+<div id="notesView" style="display: none;">
+  <div id="noteHandle" class="note-handle">⠿ 메모장 · 여기를 잡고 끌어서 옮겨요</div>
+  <div class="note-bar">
+    <button id="note-own-sangmin" class="nb sangmin" onclick="noteSetOwner('sangmin')">상민</button>
+    <button id="note-own-soi" class="nb soi" onclick="noteSetOwner('soi')">소이</button>
+    <select id="notePageSel" onchange="noteSelectPage(this.value)"></select>
+    <button class="nb" onclick="noteNewPage()">＋</button>
+    <button class="nb" onclick="noteRename()">이름</button>
+    <button class="nb danger" style="margin-left:auto;" onclick="toggleNotes()">✕</button>
+  </div>
+  <div class="note-bar">
+    <button id="note-tool-pen" class="nb" onclick="noteSetTool('pen')">✏️</button>
+    <button id="note-tool-hl" class="nb" onclick="noteSetTool('hl')">🖍</button>
+    <button id="note-tool-eraser" class="nb" onclick="noteSetTool('eraser')">🧽</button>
+    <span id="noteColors" style="display:flex; gap:6px; margin:0 2px;"></span>
+    <input type="range" id="noteWidth" min="1" max="10" value="3" style="width:60px;">
+    <button class="nb" onclick="noteUndo()">↩</button>
+  </div>
+  <div class="note-wrap" id="noteWrap"><canvas id="noteCanvas"></canvas></div>
+  <div class="note-bar" style="margin:6px 0 0;">
+    <button class="nb save" onclick="noteSaveClick()">💾 저장</button>
+    <button class="nb danger" onclick="noteDeletePage()">🗑 메모 삭제</button>
+    <button class="nb danger" onclick="noteClear()">비우기</button>
+    <label style="font-size:10px; font-weight:700; color:#475569;"><input type="checkbox" id="noteFinger" onchange="noteFingerChange()"> 손가락</label>
+    <span id="noteStatus" style="font-size:10px; color:#78716c; font-weight:700;"></span>
   </div>
 </div>
 
@@ -1668,8 +1680,9 @@
     window.currentTab = tab;
     document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
     document.getElementById(`tab-${tab}`).classList.add('active');
+    if (document.getElementById('notesView').style.display === 'block') setTimeout(notesOpen, 0);
 
-    const views = ['plannerView', 'progressSangminView', 'progressSoiView', 'archiveView', 'calendarView', 'lectureView', 'notesView'];
+    const views = ['plannerView', 'progressSangminView', 'progressSoiView', 'archiveView', 'calendarView', 'lectureView'];
     views.forEach(v => document.getElementById(v).style.display = 'none');
 
     const ownerBadge = document.getElementById('plannerOwnerBadge');
@@ -1684,9 +1697,6 @@
     } else if (tab === 'calendar') {
       document.getElementById('calendarView').style.display = 'block';
       renderCalendar();
-    } else if (tab === 'notes') {
-      document.getElementById('notesView').style.display = 'block';
-      notesOpen();
     } else if (tab === 'lecture') {
       document.getElementById('lectureView').style.display = 'block';
       lecUpdateControls();
@@ -1998,7 +2008,7 @@
   }
 
   // ───────── 메모장 (애플펜슬 필기) ─────────
-  const NOTE_W = 1000, NOTE_H = 1400;
+  const NOTE_W = 400, NOTE_H = 400;
   const NOTE_COLORS = ['#0f172a', '#ef4444', '#2563eb', '#16a34a', '#f59e0b'];
   const note = { owner: 'sangmin', pages: [], cur: null, strokes: [], hist: [], tool: 'pen', color: '#0f172a', draw: null, pid: null, erasing: false, erased: false, built: false, ctx: null, scale: 1 };
   let noteSaveTimer = null;
@@ -2017,7 +2027,7 @@
     cv.addEventListener('pointermove', noteMove);
     cv.addEventListener('pointerup', noteUp);
     cv.addEventListener('pointercancel', noteUp);
-    window.addEventListener('resize', () => { if (window.currentTab === 'notes') noteResize(); });
+    window.addEventListener('resize', () => { if (document.getElementById('notesView').style.display === 'block') noteResize(); });
     noteSetTool('pen');
     noteSetColor(note.color);
   }
@@ -2054,7 +2064,7 @@
     ctx.setTransform(note.scale, 0, 0, note.scale, 0, 0);
     ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
     ctx.beginPath();
-    for (let y = 50; y < NOTE_H; y += 50) { ctx.moveTo(0, y); ctx.lineTo(NOTE_W, y); }
+    for (let y = 40; y < NOTE_H; y += 40) { ctx.moveTo(0, y); ctx.lineTo(NOTE_W, y); }
     ctx.stroke();
     note.strokes.forEach(s => noteDrawStroke(s));
     if (note.draw) noteDrawStroke(note.draw);
@@ -2246,9 +2256,66 @@
     noteUpdateOwnerBtns();
     await noteLoadPages();
   }
+  function noteClampPos() {
+    const v = document.getElementById('notesView');
+    if (!v.style.left) return;
+    const r = v.getBoundingClientRect();
+    v.style.left = Math.min(Math.max(0, r.left), Math.max(0, window.innerWidth - r.width)) + 'px';
+    v.style.top = Math.min(Math.max(0, r.top), Math.max(0, window.innerHeight - r.height)) + 'px';
+  }
+  function noteApplyPos() {
+    const v = document.getElementById('notesView');
+    try {
+      const pos = JSON.parse(localStorage.getItem('notePos') || 'null');
+      if (pos) { v.style.left = pos.x + 'px'; v.style.top = pos.y + 'px'; v.style.right = 'auto'; v.style.bottom = 'auto'; }
+    } catch (e) {}
+    noteClampPos();
+  }
+  (function noteDragInit() {
+    const v = document.getElementById('notesView'), h = document.getElementById('noteHandle');
+    let dx = 0, dy = 0, drag = false;
+    h.addEventListener('pointerdown', (e) => {
+      const r = v.getBoundingClientRect();
+      dx = e.clientX - r.left; dy = e.clientY - r.top; drag = true;
+      v.style.left = r.left + 'px'; v.style.top = r.top + 'px'; v.style.right = 'auto'; v.style.bottom = 'auto';
+      h.setPointerCapture(e.pointerId);
+      h.style.cursor = 'grabbing';
+      e.preventDefault();
+    });
+    h.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      const w = v.offsetWidth, ht = v.offsetHeight;
+      v.style.left = Math.min(Math.max(0, e.clientX - dx), Math.max(0, window.innerWidth - w)) + 'px';
+      v.style.top = Math.min(Math.max(0, e.clientY - dy), Math.max(0, window.innerHeight - ht)) + 'px';
+    });
+    const end = () => {
+      if (!drag) return;
+      drag = false; h.style.cursor = 'grab';
+      try { localStorage.setItem('notePos', JSON.stringify({ x: parseFloat(v.style.left), y: parseFloat(v.style.top) })); } catch (e) {}
+    };
+    h.addEventListener('pointerup', end);
+    h.addEventListener('pointercancel', end);
+    window.addEventListener('resize', () => { if (v.style.display === 'block') noteClampPos(); });
+  })();
+  function toggleNotes() {
+    const v = document.getElementById('notesView');
+    if (v.style.display === 'block') {
+      notesFlush();
+      v.style.display = 'none';
+    } else {
+      v.style.display = 'block';
+      noteApplyPos();
+      notesOpen();
+    }
+  }
+  async function noteSaveClick() {
+    clearTimeout(noteSaveTimer); noteSaveTimer = null;
+    noteStatus('저장 중…');
+    await noteSaveNow();
+  }
   function notesOpen() {
     noteBuild();
-    note.owner = (typeof lecMe === 'string') ? lecMe : 'sangmin';
+    note.owner = (window.currentTab === 'soi' || window.currentTab === 'progress-soi') ? 'soi' : (window.currentTab === 'sangmin' || window.currentTab === 'progress-sangmin') ? 'sangmin' : ((typeof lecMe === 'string') ? lecMe : 'sangmin');
     noteUpdateOwnerBtns();
     noteResize();
     noteLoadPages();
