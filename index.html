@@ -135,6 +135,7 @@
 
     /* 할 일 칸: 고정 높이 대신 내용만큼 늘어남 */
     .todo-cell { min-height: 155px; text-align: left; padding: 4px; vertical-align: top; background: #ffffff; }
+    .todo-label { vertical-align: top !important; padding-top: 8px !important; font-size: 10px; }
     .todo-item {
       display: flex; flex-direction: column; gap: 3px;
       margin-bottom: 5px; border-radius: 6px; padding: 4px 5px;
@@ -158,16 +159,31 @@
     }
     .todo-item textarea::placeholder { color: rgba(15,23,42,0.35); }
 
-    .time-col { width: 45px; background: #f1f5f9; font-weight: 800; color: var(--text); border-right: 2px solid var(--border) !important; }
+    /* 시간 열: 왼쪽(.time-col)과 오른쪽(.time-col-r) 폭을 똑같이 맞춰 할 일 칸과 시간표 열이 일직선이 됨 */
+    .time-col { width: 38px; background: #f1f5f9; font-weight: 800; color: var(--text); border-right: 2px solid var(--border) !important; }
+    .time-col-r { width: 38px; background: #f1f5f9; font-weight: 800; color: var(--text); border-left: 2px solid var(--border) !important; }
     .slot-cell { height: 16px; cursor: pointer; border-right: 1px dashed var(--border-dashed); }
     .slot-cell:nth-child(3n) { border-right: 1px solid var(--border-light); }
     .slot-cell:last-child { border-right: none; }
 
     tbody#gridBody tr { border-bottom: 1px solid var(--border-light); }
 
+    /* 한 시간 줄마다 번갈아 띠 */
+    tr.band td:not(.time-col):not(.time-col-r) { background: #f1f5f9; }
+    /* 칠한 칸이 있는 시간 줄은 시간 숫자 강조 */
+    tr.has-study .hr-l, tr.has-study .hr-r { color: #1d4ed8; }
+    .hr-cell { position: relative; }
+    .hr-l, .hr-r {
+      position: absolute; top: 50%; transform: translateY(-50%); z-index: 2;
+      font-size: 9px; line-height: 1; font-weight: 800; color: #64748b; pointer-events: none;
+      text-shadow: 0 0 2px #fff, 0 0 3px #fff;
+    }
+    .hr-l { left: 2px; }
+    .hr-r { right: 2px; }
+
     /* 하루 공부시간 합계 행 */
     .total-row td { background: #f1f5f9; font-weight: 800; border-top: 2px solid var(--border); font-size: 11px; padding: 6px 2px; color: #3b82f6; line-height: 1.3; }
-    .total-row td.time-col { color: var(--text); }
+    .total-row td.time-col, .total-row td.time-col-r { color: var(--text); font-size: 10px; }
 
     .progress-container { padding: 20px; background: #ffffff; overflow-x: auto; }
     .progress-title-badge { display: inline-block; padding: 4px 16px; border-radius: 20px; color: white; font-weight: 900; font-size: 14px; margin-bottom: 12px; }
@@ -469,6 +485,7 @@
       </script>
     </div>
 
+    <!-- 할 일 표와 시간표는 둘 다 7칸 전체 폭이라 요일이 위아래로 일직선. 시각은 시간표 맨 왼쪽/오른쪽 칸 안에 작게 표시 -->
     <table class="table">
       <thead>
         <tr>
@@ -504,18 +521,19 @@
     <table class="table">
       <thead>
         <tr>
-          <th class="time-col">TIME</th>
           <th>MON<span class="th-date" data-d="0"></span></th><th>TUE<span class="th-date" data-d="1"></span></th><th>WED<span class="th-date" data-d="2"></span></th><th>THU<span class="th-date" data-d="3"></span></th><th>FRI<span class="th-date" data-d="4"></span></th><th>SAT<span class="th-date" data-d="5"></span></th><th>SUN<span class="th-date" data-d="6"></span></th>
         </tr>
       </thead>
       <tbody id="gridBody">
         <script>
           for(let h=6; h<=24; h++) {
-            const hStr = String(h).padStart(2, '0') + ':00';
-            document.write(`<tr>`);
-            document.write(`<td class="time-col">${hStr}</td>`);
+            const hh = String(h).padStart(2, '0');
+            document.write(`<tr data-hour="${h}" class="${h % 2 === 0 ? 'band' : ''}">`);
             for(let d=0; d<7; d++) {
-              document.write(`<td><div style="display:flex; height:100%;">`);
+              document.write(`<td class="hr-cell">`);
+              if (d === 0) document.write(`<span class="hr-l">${hh}</span>`);
+              if (d === 6) document.write(`<span class="hr-r">${hh}</span>`);
+              document.write(`<div style="display:flex; height:100%;">`);
               for(let m=0; m<6; m++) {
                 document.write(`<div class="slot-cell" style="flex:1;" data-day-col="${d}" data-slot-id="${d}-${h}-${m}"></div>`);
               }
@@ -527,7 +545,6 @@
       </tbody>
       <tfoot>
         <tr class="total-row">
-          <td class="time-col">합계</td>
           <td class="day-total" data-d="0">0분</td>
           <td class="day-total" data-d="1">0분</td>
           <td class="day-total" data-d="2">0분</td>
@@ -537,8 +554,7 @@
           <td class="day-total" data-d="6">0분</td>
         </tr>
         <tr class="total-row">
-          <td class="time-col">주간</td>
-          <td colspan="7" id="weekTotal">0시간 0분</td>
+          <td colspan="7" id="weekTotal">주간 합계 · 0시간 0분</td>
         </tr>
       </tfoot>
     </table>
@@ -648,6 +664,7 @@
         <tr>
           <th class="time-col">TIME</th>
           <th>MON</th><th>TUE</th><th>WED</th><th>THU</th><th>FRI</th><th>SAT</th><th>SUN</th>
+          <th class="time-col-r">TIME</th>
         </tr>
       </thead>
       <tbody id="lecGridBody"></tbody>
@@ -893,15 +910,20 @@
     if (r) onTodoRadio(r);
   }
 
-  // ───────── 하루 공부시간 합계 (1칸 = 10분) ─────────
+  // ───────── 하루 공부시간 합계 (1칸 = 10분) + 칠한 시간 줄 강조 ─────────
   function updateDayTotals() {
     const counts = [0, 0, 0, 0, 0, 0, 0];
+    const studyHours = new Set();
     document.querySelectorAll('.slot-cell').forEach(s => {
       const bg = s.style.backgroundColor;
       if (bg && bg !== 'transparent' && bg !== 'rgb(255, 255, 255)' && bg !== '#ffffff') {
         const d = parseInt(s.dataset.dayCol, 10);
         if (!isNaN(d)) counts[d]++;
+        studyHours.add(s.dataset.slotId.split('-')[1]);
       }
+    });
+    document.querySelectorAll('#gridBody tr').forEach(tr => {
+      tr.classList.toggle('has-study', studyHours.has(tr.dataset.hour));
     });
     const fmt = n => {
       const m = n * 10, h = Math.floor(m / 60);
@@ -912,7 +934,7 @@
     });
     const all = counts.reduce((a, b) => a + b, 0) * 10;
     const w = document.getElementById('weekTotal');
-    if (w) w.textContent = `${Math.floor(all / 60)}시간 ${all % 60}분`;
+    if (w) w.textContent = `주간 합계 · ${Math.floor(all / 60)}시간 ${all % 60}분`;
   }
 
   // ───────── 진도표 (진도율 포함) ─────────
@@ -1749,13 +1771,15 @@
   }
 
   function paint(td) {
-    if (window.currentColor !== '#ffffff') {
+    const erasing = window.currentColor === '#ffffff';
+    if (!erasing) {
       const slotDayCol = parseInt(td.dataset.dayCol, 10);
       if (slotDayCol !== window.currentSelectedDay) {
         return;
       }
     }
-    td.style.backgroundColor = window.currentColor;
+    // 지울 때는 배경을 비워서 시간 줄 띠가 그대로 보이게 함
+    td.style.backgroundColor = erasing ? '' : window.currentColor;
     updateDayTotals();
     onDataChanged();
   }
@@ -1787,13 +1811,14 @@
   function buildLectureGrid() {
     let html = '';
     for (let h = 6; h <= 24; h++) {
-      html += `<tr><td class="time-col">${String(h).padStart(2, '0')}:00</td>`;
+      const hStr = String(h).padStart(2, '0') + ':00';
+      html += `<tr class="${h % 2 === 0 ? 'band' : ''}"><td class="time-col">${hStr}</td>`;
       for (let d = 0; d < 7; d++) {
         html += '<td><div style="display:flex; height:100%;">';
         for (let m = 0; m < 6; m++) html += `<div class="lec-cell" data-id="${d}-${h}-${m}"></div>`;
         html += '</div></td>';
       }
-      html += '</tr>';
+      html += `<td class="time-col-r">${hStr}</td></tr>`;
     }
     const body = document.getElementById('lecGridBody');
     body.innerHTML = html;
